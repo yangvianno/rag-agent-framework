@@ -1,0 +1,20 @@
+vector_db:
+  type: qdrant
+  url: ${QDRANT_URL}
+  prefer_grpc: true
+
+llm:
+  default: openai
+  openai:
+    chat_model: gpt-4o-mini
+    api_key_env: OPENAI_API_KEY
+  ollama:
+    url: ${OLLAMA_URL}
+    model: llama2
+
+agent:
+  framework: crewai
+  max_iteraction: 3
+
+retriever:
+  k: 4
