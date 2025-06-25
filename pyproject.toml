@@ -1,3 +1,5 @@
+# pyproject.toml
+
 [tool.poetry]
 name = "rag-agent-framework"
 version = "0.1.0"
@@ -17,6 +19,7 @@ crewai = "^0.130.0"
 
 # Vector DB (Chroma included but code will use Qdrant)
 chromadb = "^0.5.3"
+qdrant-client = "^1.7.0"
 
 # LLM Support
 python-dotenv = "^1.0.1"
@@ -35,6 +38,7 @@ requests = "^2.32.0"
 
 # Tooling
 duckduckgo-search = "^6.1.8"
+langchain-qdrant = "^0.2.0"
 
 
 [build-system]

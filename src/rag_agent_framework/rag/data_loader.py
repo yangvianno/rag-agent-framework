@@ -1,7 +1,7 @@
 # src/rag_agent_framework/rag/data_loader.py
 
 from pathlib import Path
-from langchain.document_loaders import PyPDFLoader, WebBaseLoader
+from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain.schema import Document
 
 """

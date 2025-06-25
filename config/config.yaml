@@ -1,3 +1,5 @@
+# config/config.yaml
+
 vector_db:
   type: qdrant
   url: ${QDRANT_URL}
@@ -7,10 +9,12 @@ llm:
   default: openai
   openai:
     chat_model: gpt-4o-mini
+    embedding_model: text-embedding-3-small
     api_key_env: OPENAI_API_KEY
   ollama:
     url: ${OLLAMA_URL}
     model: llama2
+    embedding_model: nomic-embed-text
 
 agent:
   framework: crewai
