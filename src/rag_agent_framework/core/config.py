@@ -27,6 +27,6 @@ RETRIEVER_K   = _cfg.get("retriever", {}).get("k", 4)
 OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY")
 OPENAI_EMBED_MODEL = LLM_CFG.get("openai", {}).get("embedding_model") # will return None instead of LLM_CFG["openai"]["embedding_model"]
 OLLAMA_URL         = os.getenv("OLLAMA_URL")
-# QDRANT_URL         = os.getenv("QDRANT_URL") Get the URL from the environment in the scripts/ingest.py
+# QDRANT_URL         = os.getenv("QDRANT_URL") # Get the URL from the environment in the scripts/ingest.py instead
 SERPAPI_API_KEY    = os.getenv("SERPAPI_API_KEY")
 

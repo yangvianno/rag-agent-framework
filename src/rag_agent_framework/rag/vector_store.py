@@ -35,7 +35,7 @@ def get_vector_store(collection_name: str, url: str) -> QdrantVectorStore:
     # 2. Initialize Qdrant client
     client = QdrantClient(url = url)
 
-    # 3. Returns a LangChain wrapper around a Qdrant collection
+    # 3. Returns a LangChain vectore store wrapper around an existing Qdrant collection
     return QdrantVectorStore(
         client = client,
         collection_name = collection_name,
