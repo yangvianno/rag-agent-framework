@@ -19,7 +19,7 @@ from rag_agent_framework.core.config import LLM_CFG, VECTOR_DB_CFG
 # --- Helper Functions ---
 def get_embedder():
     if LLM_CFG["default"] == "openai":
-        return OpenAIEmbeddings(openai_api_keys = os.getenv("OPENAI_API_KEY"))
+        return OpenAIEmbeddings(openai_api_key = os.getenv("OPENAI_API_KEY"))
     else:
         return OllamaEmbeddings(
             model = LLM_CFG["ollama"]["embedding_model"],
@@ -28,10 +28,7 @@ def get_embedder():
     
 def _get_qdrant_client() -> QdrantClient:
     """Helper to get a Qdrant client instance"""
-    return QdrantClient(
-        url = os.getenv("QDRANT_URL"),
-        prefer_grpc = VECTOR_DB_CFG.get("prefer_grpc", False)
-    )
+    return QdrantClient(url = os.getenv("QDRANT_URL"))
 
 # --- Memory Store Class ---
 class MemoryStore:
@@ -41,16 +38,22 @@ class MemoryStore:
         self.embedder = get_embedder()
         self.client = _get_qdrant_client()
 
-        # Ensure the collection exitst before creating the store wrapper
-        vector_size = len(self.embedder.embed_query("test"))
-        self.client.recreate_collection(
-            collection_name = self.collection_name,
-            embedding = self.embedder
-        )
+        # Ensure collection exists without wiping it
+        try:
+            self.client.get_collection(collection_name = self.collection_name)
+            print(f"Memory collection '{self.collection_name}' already exists.")
+        except Exception:
+            # If it doesn't exist, create it.
+            vector_size = len(self.embedder.embed_query("test"))
+            self.client.creat_collection(
+                collection_name = self.collection_name,
+                vector_config = models.VectorParams(size = vector_size, distance = models.Distance.COSINE)
+            )
+            print(f"Created new memory collection: '{self.collection_name}' after ensuring no '{self.collection_name}' had been existed before.")
 
     def add_memory(self, summary: str):
         """Adds a new memory summary to the user's collection"""
-        self.store.ad_texts([summary])                                  # QdrantVectorStore
+        self.store.add_texts([summary])                                  # QdrantVectorStore
 
     def get_memories(self, query: str, k: int = 3) -> list[Document]:
         """Retrieves the most relevant memories for a given query"""
