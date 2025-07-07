@@ -5,13 +5,14 @@ import sys
 import argparse
 from pathlib import Path
 
-# This block ensures the 'src' dir is on the Python path
+# --- Path fix: Ensures the 'src' directory is on the Python path ---
 project_root = Path(__file__).resolve().parents[1]
-src_path = project_root / "src"         # Doesnt mean creating new empty "/src" but merely creates a complete separate Path object in memory then tells system "I intend to work with.."
-if not src_path.exists():
+src_path = project_root / "src"     # Doesnt mean creating new empty "/src" but merely creates a complete separate Path object in memory then tells system "I intend to work with.."
+if not src_path.exists():               # When specifically points to the /src in the sys.path but if not exists then raiseError
     raise FileNotFoundError(f"'src' folder not found at {src_path}")
-if str(src_path) not in sys.path:
+if str(src_path) not in sys.path:       # if /src exists but not found? Added to the sys.path
     sys.path.insert(0, str(src_path))
+# --- End Path fix ---
 
 from dotenv import load_dotenv
 load_dotenv()

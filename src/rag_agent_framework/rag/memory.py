@@ -14,12 +14,15 @@ from langchain_core.output_parsers  import StrOutputParser
 from langchain_core.runnables       import Runnable                 # Base clas for anything can be "run" in LangChain pipeline (models, chains, retrievers, etc.)
 
 from langchain.schema import Document   # Used in RAG workflows to pass around the individual text chunks that also carry context about their origin.
-from rag_agent_framework.core.config import LLM_CFG, VECTOR_DB_CFG
+from rag_agent_framework.core.config import LLM_CFG
 
 # --- Helper Functions ---
 def get_embedder():
     if LLM_CFG["default"] == "openai":
-        return OpenAIEmbeddings(openai_api_key = os.getenv("OPENAI_API_KEY"))
+        return OpenAIEmbeddings(
+            model=LLM_CFG["openai"]["embedding_model"],
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+        )
     else:
         return OllamaEmbeddings(
             model = LLM_CFG["ollama"]["embedding_model"],
@@ -45,27 +48,40 @@ class MemoryStore:
         except Exception:
             # If it doesn't exist, create it.
             vector_size = len(self.embedder.embed_query("test"))
-            self.client.creat_collection(
+            self.client.create_collection(
                 collection_name = self.collection_name,
-                vector_config = models.VectorParams(size = vector_size, distance = models.Distance.COSINE)
+                vectors_config = models.VectorParams(size = vector_size, distance = models.Distance.COSINE)
             )
             print(f"Created new memory collection: '{self.collection_name}' after ensuring no '{self.collection_name}' had been existed before.")
 
+        # Initialize the store attribute
+        self.store = QdrantVectorStore(
+            client = self.client,
+            collection_name = self.collection_name,
+            embedding = self.embedder,
+        )
+
+
     def add_memory(self, summary: str):
-        """Adds a new memory summary to the user's collection"""
-        self.store.add_texts([summary])                                  # QdrantVectorStore
+        """Adds a new memory summary to the user's collection"""                                 
+        self.store.add_texts([summary])                                 # QdrantVectorStore
+        print(f"Added new memory to collection '{self.collection_name}'")
 
     def get_memories(self, query: str, k: int = 3) -> list[Document]:
         """Retrieves the most relevant memories for a given query"""
         retriever = self.store.as_retriever(search_kwargs = {"k": k})   # QdrantVectorStore
+        print(f"Retrieving memories relevant to: '{query}'")
 
         return retriever.get_relevant_documents(query)
     
 # --- Summarizer Chain ---
 SUMMARIZER_PROMPT_TEMPLATE = """
-Summarize the following coversation into a consise 2-3 sentences memory segment:
+Summarize the following conversation into a concise 2-3 sentence memory segment that captures the key information and user intent.
+
+CONVERSATION:
 {text}
 """
+
 def get_summarizer() -> Runnable:
     """Builds and returns a modern summarizer chain using LCEL"""
     if LLM_CFG["default"] == "openai":

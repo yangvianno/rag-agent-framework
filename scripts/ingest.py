@@ -4,13 +4,14 @@ import sys
 import os
 import argparse
 
-# --- Start of the Fix ---
-# This block manually adds the 'src' directory to the Python path
-# to ensure that the 'rag_agent_framework' module can be found.
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-src_path = os.path.join(project_root, 'src')
-if src_path not in sys.path: sys.path.insert(0, src_path)
-# --- End of the Fix ---
+# --- Path fix: Ensures the 'src' directory is on the Python path ---
+project_root = Path(__file__).resolve().parents[1]
+src_path = project_root / "src"     # Doesnt mean creating new empty "/src" but merely creates a complete separate Path object in memory then tells system "I intend to work with.."
+if not src_path.exists():               # When specifically points to the /src in the sys.path but if not exists then raiseError
+    raise FileNotFoundError(f"'src' folder not found at {src_path}")
+if str(src_path) not in sys.path:       # if /src exists but not found? Added to the sys.path
+    sys.path.insert(0, str(src_path))
+# --- End Path fix ---
 
 # Load environment variables first
 from dotenv import load_dotenv
