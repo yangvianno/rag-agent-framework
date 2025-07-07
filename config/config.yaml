@@ -5,10 +5,11 @@ vector_db:
   url: ${QDRANT_URL}
   prefer_grpc: false
 
+
 llm:
   default: openai
   openai:
-    chat_model: gpt-4o-mini
+    chat_model: gpt-4o
     embedding_model: text-embedding-3-small
     api_key_env: OPENAI_API_KEY
   ollama:
@@ -16,9 +17,11 @@ llm:
     model: llama2
     embedding_model: nomic-embed-text
 
+
 agent:
   framework: crewai
   max_iteraction: 3
+  
 
 retriever:
-  k: 4
+  k: 4    # Number of documents to retrieve

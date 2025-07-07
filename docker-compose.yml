@@ -1,0 +1,30 @@
+# docker-compose.yml -- The conductor -- tells Docker how to run and connect multiple services at once (Python app & Qdrant database)
+
+version: '3.8'
+
+services:
+  # The Qdrant Database Service
+  qdrant:
+  image: qdrant/qdrant:latest
+  ports:
+    - "6333:6333" # REST_API
+    - "6334:6334" # gPRC
+  volumes:
+    - ./qdrant_storage:/qdrant/storage
+  container_name: qdrant_db
+
+  # Python Application Service
+  api:
+    build: . # Build the image from the Dockerfile in the current directory
+    ports:
+      - "8000:8000"
+    # Pass environment variables from local .env file into the container
+    env_file:
+      - .env
+    # This makes the 'api' service wait for the 'qdrant' service to be healthy
+    depends_on:
+      - qdrant
+    container_name: rag_api_service
+
+volumes:
+  qdrant_storage

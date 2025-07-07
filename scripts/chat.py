@@ -62,5 +62,8 @@ def main():
         conversation_to_summarize = f"User asked: {question}\nAgent answered: {result}"
         summary = summarizer.invoke({"text": conversation_to_summarize})
 
+        # 5. Call the add_memory method on the memory instance
+        memory.add_memory(summary)
+
 if __name__ == "__main__":
     main()
