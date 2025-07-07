@@ -9,7 +9,7 @@ agent_crew = Crew(
     tasks = [document_researcher_task, general_researcher_task],
     process = Process.sequential,   # Tells the crew to execute the tasks one by one, in order.
     # CrewAI will automatically pass the OUTPUT of one task as CONTEXT to the next.
-    verbose = 2                     # Prints more granular details, useful for understanding how agents are reasoning, which tools are being called, etc
+    verbose = True                     # Prints more granular details, useful for understanding how agents are reasoning, which tools are being called, etc
 )
 
 def get_crew():

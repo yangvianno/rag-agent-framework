@@ -2,7 +2,7 @@
 # query.py is designed for human use vs rag_tool.py designed as API for the AI Agent, and we can add more tools later specialized for AI Agent 
 
 import os
-from crewai_tools import tool
+from crewai.tools import tool
 from rag_agent_framework.rag.rag_chain import get_rag_chain
 
 
@@ -14,10 +14,12 @@ def rag_tool(question: str) -> str:
     """
     qdrant_url = os.getenv("QDRANT_URL")
     
-    if not qdrant_url: raise ValueError("QDRANT_URL environment variable not set.")
+    if not qdrant_url: 
+        raise ValueError("QDRANT_URL environment variable not set.")
 
     # Get the RAG chain (builds retrieval, generation pipeline) - for rag_tool to execute that pipeline given the question
-    rag_chain = get_rag_chain(collection_name = "my_rag_chain", url = qdrant_url)
+    collection_name = "my_rag_collection"
+    rag_chain = get_rag_chain(collection_name = collection_name, url = qdrant_url)
 
     # Invoke the chain with the questions
     result = rag_chain.invoke(question)
