@@ -1,27 +1,32 @@
 # config/config.yaml
 
+# Vector Database settings
 vector_db:
+  default_collection_name: "my_rag_collection"
   type: qdrant
   url: ${QDRANT_URL}
   prefer_grpc: false
 
-
+# LLM provider settings
 llm:
   default: openai
   openai:
     chat_model: gpt-4o
     embedding_model: text-embedding-3-small
+    embedding_dims: 1536 # Dimensions for text-embedding-3-small
     api_key_env: OPENAI_API_KEY
   ollama:
-    url: ${OLLAMA_URL}
     model: llama2
     embedding_model: nomic-embed-text
+    embedding_dims: 768 # Dimensions for nomic-embed-text
+    url: ${OLLAMA_URL}
 
-
+# Agent settings
 agent:
+  default_user_id: "web_ui_user"
   framework: crewai
   max_iteraction: 3
-  
 
+# Retriever settings
 retriever:
   k: 4    # Number of documents to retrieve
