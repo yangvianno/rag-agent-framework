@@ -1,0 +1,29 @@
+# .dockerignore
+
+# Ignore Docker-related files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Ignore local virtual environment
+.venv/
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local data and database storage
+data/
+qdrant_storage/
+
+# Ignore IDE and OS-specific files
+.idea/
+.vscode/
+*.DS_Store
+
+# Ignore git files
+.git/
+.gitignore

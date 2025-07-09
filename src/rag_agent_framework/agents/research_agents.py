@@ -45,3 +45,14 @@ general_researcher = Agent(
     allow_delegation = False,   # In the CrewAI framework, an Agent can (optionally) delegate tasks to other agents.
     verbose = True
 )
+
+# --- Manager Agent ---
+# This agent will delegate tasks to the appropriate researcher
+manager_agent = Agent(
+    role = "Project Manager",
+    goal = "Efficiently manage the research process by delegating tasks to the appropriate specialist agent. Review the final answers to ensure they are complete and meet the user's meet.",
+    backstory = "You are an experienced project manager, skilled at analyzing requests and identifying the best person for the job. You break down complex questions and ensure that final product from your team is coherent and valuable.",
+    llm = get_agent_llm(),
+    allow_delegation = True,
+    verbose = True
+)

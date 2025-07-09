@@ -48,7 +48,7 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
         memory_store = MemoryStore(user_id=request.user_id)
 
         # 2. Retrieve relevant memories
-        print(f"Retrieving memories for query: {request:question}")
+        print(f"Retrieving memories for query: {request.question}")
         relevant_memories = memory_store.get_memories(query=request.question)
         memory_context = "\n".join([mem.page_content for mem in relevant_memories])
         print(f"Retrieved context: {memory_context}")
@@ -66,14 +66,14 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
 
         # 5. Summarize the interaction for long-term memory
         summarizer_chain = get_summarizer()
-        conversation_to_summarize = f"User Question: {request.question}\nAgent Answer: {result}"
+        conversation_to_summarize = f"User Question: {request.question}\nAgent Answer: {result.raw}"
         summary = summarizer_chain.invoke({"text": conversation_to_summarize})
 
         # 6. Add the new summary to the memory store
         memory_store.add_memory(summary)
 
         return ChatResponse(
-            asnwer = result,
+            answer = result.raw,
             user_id = request.user_id,
             memory_summary = summary
         )

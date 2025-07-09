@@ -19,14 +19,14 @@ streamlit.markdown("Interact with the agent crew. The backend manages document i
 # Initialize a unique user_id for the session and the chat history
 if "user_id" not in streamlit.session_state:
     streamlit.session_state.user_id = f"web_user_{str(uuid.uuid4())[:8]}"
-    streamlit.session_state.message = []
+    streamlit.session_state.messages = []
 
 # Display the user ID in the sidebar for reference
 streamlit.sidebar.info(f"Your User ID for this session is:\n'{streamlit.session_state.user_id}'")
 streamlit.markdown(
     """
         **How to Use:**
-        1. First, run the backend services using `docker-compse up`
+        1. First, run the backend services using `docker compose up --build -d`
         2. Next, ingest documents using the `scripts/ingest.py` script from the terminal
             ```bash
             # From your project root
@@ -45,9 +45,9 @@ for message in streamlit.session_state.messages:
 
 
 # --- Handle User Input ---
-if prompt := streamlit.chat_input("Ask a question about your documents.."):
+if prompt := streamlit.chat_input("Ask a question about your documents..."):
     # Add user message to chat history and display it
-    streamlit.session_state.messaages.append({"role": "user", "content": prompt})
+    streamlit.session_state.messages.append({"role": "user", "content": prompt})
     with streamlit.chat_message("user"):
         streamlit.markdown(prompt)
 
@@ -72,7 +72,7 @@ if prompt := streamlit.chat_input("Ask a question about your documents.."):
 
                 # Optionally display the memory summary in a expander
                 if summary := response_data.get("memory_summary"):
-                    with streamlit.explander("📝 View Memory Summary"):
+                    with streamlit.expander("📝 View Memory Summary"):
                         streamlit.write(summary)
 
             except requests.exceptions.RequestException as e:
