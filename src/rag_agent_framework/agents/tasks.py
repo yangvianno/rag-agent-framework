@@ -1,7 +1,7 @@
 # src/rag_agent_framework/agents/tasks.py -- Agent Task Definitions
 
 from crewai import Task
-from .research_agents import document_researcher, general_researcher
+from .research_agents import document_researcher, general_researcher, manager_agent
 
 document_researcher_task = Task(
     description = (
@@ -31,4 +31,15 @@ general_researcher_task = Task(
     ),
     expected_output = "A summary of the most relevant, up-to-date information from your web search.",
     agent = general_researcher
+)
+
+# --- Manager Task --- This is entry point task that the manager will handle
+manager_task = Task(
+    description = (
+        "Analyze the user's topic: '{topic}'. First, determine if the question can likely be answered by the internal document knowledge base. If so, delegate to the Document Researcher. "
+        "If the question is more general or requires up-to-date information, delegate to the General Researcher. "
+        "Finally, review the researcher's findings, and compile a complete, final answer for the user."
+    ),
+    expected_output = "A final, comprehensive answer that directly addresses the user's question, based on the work of the specialist agents.",
+    agent = manager_agent
 )

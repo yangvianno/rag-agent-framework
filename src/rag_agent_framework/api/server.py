@@ -61,7 +61,7 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
 
         # 4. Kick off the crew's task
         print("Kicking off the agent crew...")
-        result = agent_crew.kickoff(inputs=inputs)
+        result = agent_crew.kickoff(inputs=inputs)      # Gives that memory + question to a group of agents (the “crew”) to figure out the answer.
         print(f"Crew finished with result: {result}")
 
         # 5. Summarize the interaction for long-term memory

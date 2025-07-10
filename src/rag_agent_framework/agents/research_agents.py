@@ -23,7 +23,7 @@ def get_agent_llm():
             base_url = os.getenv("OLLAMA_URL")
         )
     
-# Create a researcher agent that uses the RAG tool
+# --- Researcher Agent --- uses the RAG tool
 document_researcher = Agent(
     role = "Document Researcher",
     goal = "Find and return relevant information from the provided documents.",
@@ -34,8 +34,7 @@ document_researcher = Agent(
     verbose = True,
 )
 
-# Create a general researcher agent that can search the web
-# This agent uses SERPAPI_API_KEY in the .env file
+# --- General Researcher Agent --- search the web, uses SERPAPI_API_KEY in the .env file
 general_researcher = Agent(
     role = "General Researcher",
     goal = "Find and return general information from the web.",
@@ -46,8 +45,7 @@ general_researcher = Agent(
     verbose = True
 )
 
-# --- Manager Agent ---
-# This agent will delegate tasks to the appropriate researcher
+# --- Manager Agent --- will delegate tasks to the appropriate researcher
 manager_agent = Agent(
     role = "Project Manager",
     goal = "Efficiently manage the research process by delegating tasks to the appropriate specialist agent. Review the final answers to ensure they are complete and meet the user's meet.",
