@@ -16,23 +16,10 @@ from langchain_core.runnables       import Runnable                 # Base clas 
 
 from langchain.schema import Document   # Used in RAG workflows to pass around the individual text chunks that also carry context about their origin.
 from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, QDRANT_URL
-
-# --- Helper Functions ---
-def get_embedder():
-    if LLM_CFG["default"] == "openai":
-        return OpenAIEmbeddings(
-            model=LLM_CFG["openai"]["embedding_model"],
-            openai_api_key = OPENAI_API_KEY
-        )
-    else:
-        return OllamaEmbeddings(
-            model = LLM_CFG["ollama"]["embedding_model"],
-            base_url = OLLAMA_URL
-        )
     
 def _get_qdrant_client() -> QdrantClient:
     """Helper to get a Qdrant client instance"""
-    return QdrantClient(url = OLLAMA_URL)
+    return QdrantClient(url = QDRANT_URL)
 
 # --- Memory Store Class ---
 class MemoryStore:

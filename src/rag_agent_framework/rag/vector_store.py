@@ -6,6 +6,20 @@ from langchain_qdrant import QdrantVectorStore
 from langchain_community.embeddings.ollama import OllamaEmbeddings
 from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL
 
+# Helper function to get the embedding model based on the config
+def get_embedder():
+    if LLM_CFG["default"] == "openai":
+        return OpenAIEmbeddings(
+            model=LLM_CFG["openai"]["embedding_model"],
+            openai_api_key = OPENAI_API_KEY
+        )
+    else:
+        return OllamaEmbeddings(
+            model = LLM_CFG["ollama"]["embedding_model"],
+            base_url = OLLAMA_URL
+        )
+
+
 """
 	1. We instantiate a QdrantClient once, then wrap it in LangChain’s QdrantVectorStore class for easy document add/query.
     2. We pull in the Qdrant URL from the provided argument.

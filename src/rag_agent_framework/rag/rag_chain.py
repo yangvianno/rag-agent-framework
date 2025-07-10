@@ -30,7 +30,7 @@ def get_rag_chain(collection_name: str, url: str):
         llm = ChatOpenAI(model = LLM_CFG["openai"]["chat_model"],
                          openai_api_key = OPENAI_API_KEY)
     else:
-        llm = ChatOllama(model = LLM_CFG["ollama"]["model"],
+        llm = ChatOllama(model = LLM_CFG["ollama"]["chat_model"],
                          base_url = OLLAMA_URL)
         
     # Get the vector store and retriever
