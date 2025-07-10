@@ -15,24 +15,24 @@ from langchain_core.output_parsers  import StrOutputParser
 from langchain_core.runnables       import Runnable                 # Base clas for anything can be "run" in LangChain pipeline (models, chains, retrievers, etc.)
 
 from langchain.schema import Document   # Used in RAG workflows to pass around the individual text chunks that also carry context about their origin.
-from rag_agent_framework.core.config import LLM_CFG
+from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, QDRANT_URL
 
 # --- Helper Functions ---
 def get_embedder():
     if LLM_CFG["default"] == "openai":
         return OpenAIEmbeddings(
             model=LLM_CFG["openai"]["embedding_model"],
-            openai_api_key = os.getenv("OPENAI_API_KEY")
+            openai_api_key = OPENAI_API_KEY
         )
     else:
         return OllamaEmbeddings(
             model = LLM_CFG["ollama"]["embedding_model"],
-            base_url = os.getenv("OLLAMA_URL")
+            base_url = OLLAMA_URL
         )
     
 def _get_qdrant_client() -> QdrantClient:
     """Helper to get a Qdrant client instance"""
-    return QdrantClient(url = os.getenv("QDRANT_URL"))
+    return QdrantClient(url = OLLAMA_URL)
 
 # --- Memory Store Class ---
 class MemoryStore:
@@ -103,12 +103,12 @@ def get_summarizer() -> Runnable:
     if LLM_CFG["default"] == "openai":
         llm = ChatOpenAI(
             model = LLM_CFG["openai"]["chat_model"],
-            openai_api_key = os.getenv("OPENAI_API_KEY")
+            openai_api_key = OPENAI_API_KEY
         )
     else:
         llm = ChatOllama(
             model = LLM_CFG["ollama"]["model"],
-            base_url = os.getenv("OLLAMA_URL")
+            base_url = OLLAMA_URL
         )
     
     prompt = ChatPromptTemplate.from_template(SUMMARIZER_PROMPT_TEMPLATE)

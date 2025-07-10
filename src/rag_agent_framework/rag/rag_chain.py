@@ -8,7 +8,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 
-from rag_agent_framework.core.config import LLM_CFG, RETRIEVER_K
+from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, RETRIEVER_K
 from rag_agent_framework.rag.vector_store import get_vector_store
 
 ### This template is the instruction for the LLM.
@@ -24,16 +24,14 @@ RAG_PROMPT_TEMPLATE = """
 
 # Builds and returns a modern RAG chain using LangChain Expression Language (LCEL)
 def get_rag_chain(collection_name: str, url: str):
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    ollama_url = os.getenv("OLLAMA_URL")
 
     # Instantiate the LLM based on config (inside te function)
     if LLM_CFG["default"] == "openai":
         llm = ChatOpenAI(model = LLM_CFG["openai"]["chat_model"],
-                         openai_api_key = openai_api_key)
+                         openai_api_key = OPENAI_API_KEY)
     else:
         llm = ChatOllama(model = LLM_CFG["ollama"]["model"],
-                         base_url = ollama_url)
+                         base_url = OLLAMA_URL)
         
     # Get the vector store and retriever
     vector_store = get_vector_store(collection_name=collection_name, url=url)

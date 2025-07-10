@@ -6,33 +6,27 @@ load_dotenv()
 from qdrant_client import QdrantClient, models
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.embeddings.ollama import OllamaEmbeddings
-from rag_agent_framework.core.config import LLM_CFG, VECTOR_DB_CFG
+from rag_agent_framework.core.config import LLM_CFG, VECTOR_DB_CFG, OPENAI_API_KEY, OLLAMA_URL, QDRANT_URL
 
-
-# Get variables from environment
-qdrant_url = os.getenv("QDRANT_URL")
-ollama_url = os.getenv("OLLAMA_URL")
-openai_api_key = os.getenv("OPENAI_API_KEY")
-
-if not qdrant_url: raise RuntimeError("QDRANT_URL is not set in the environment.")
+if not QDRANT_URL: raise RuntimeError("QDRANT_URL is not set in the environment.")
 
 # 1. Pick the embedding backend
 if LLM_CFG["default"] == "openai":
     embeddings = OpenAIEmbeddings(
         model = LLM_CFG["openai"]["embedding_model"],
-        openai_api_key = openai_api_key
+        openai_api_key = OPENAI_API_KEY
     )
     print("⚙️  Using OpenAI embeddings.")
 else:
     embeddings = OllamaEmbeddings(
-        model=LLM_CFG["ollama"]["embedding_model"],
-        base_url=ollama_url,  # Correct parameter is 'base_url'
+        model = LLM_CFG["ollama"]["embedding_model"],
+        base_url = OLLAMA_URL,
     )
     print("⚙️  Using Ollama embeddings.")
 
 # 2. Stand up Qdrant client
 client = QdrantClient(
-    url = qdrant_url,
+    url = QDRANT_URL,
     prefer_grpc = VECTOR_DB_CFG.get("prefer_grpc", False)
 )
 

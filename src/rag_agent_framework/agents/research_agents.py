@@ -8,19 +8,19 @@ from langchain_openai import ChatOpenAI
 from langchain_community.chat_models.ollama import ChatOllama
 
 from rag_agent_framework.tools.rag_tool import rag_tool
-from rag_agent_framework.core.config import LLM_CFG
+from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL
 
 # Get the LLM for the agents
 def get_agent_llm():
     if LLM_CFG["default"] == "openai":
         return ChatOpenAI(
             model = LLM_CFG["openai"]["chat_model"],
-            openai_api_key = os.getenv("OPENAI_API_KEY")
+            openai_api_key = OPENAI_API_KEY
         )
     else:
         return ChatOllama(
             model = LLM_CFG["ollama"]["model"],
-            base_url = os.getenv("OLLAMA_URL")
+            base_url = OLLAMA_URL
         )
     
 # --- Researcher Agent --- uses the RAG tool
