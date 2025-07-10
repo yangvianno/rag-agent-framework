@@ -2,6 +2,7 @@
 
 import os
 from qdrant_client import QdrantClient, models
+from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 from langchain_qdrant import QdrantVectorStore                      # Wraps Qdrant into a vectorStore interface that LangChain chains&retrievers can use, instead of calling QdrantClient directly
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -35,42 +36,57 @@ def _get_qdrant_client() -> QdrantClient:
 
 # --- Memory Store Class ---
 class MemoryStore:
-    """Manages a user-specific memory collection in Qdrant"""
-    def __init__(self, user_id: str, base_collection: str = "user_memory"):
-        self.collection_name = f"{base_collection}_{user_id}"
+    """Manages user-specific memories within a single, shared Qdrant collection."""
+    
+    _collection_name = "user_memory_store"      # The collection name is now a fixed, shared constant
+
+    def __init__(self, user_id: str):
+        self.user_id = user_id
         self.embedder = get_embedder()
         self.client = _get_qdrant_client()
 
-        # Ensure collection exists without wiping it
+        # This logic now ensures the SINGLE shared collection exists. It will only create the collection on the very first run for any user.
         try:
-            self.client.get_collection(collection_name = self.collection_name)
-            print(f"Memory collection '{self.collection_name}' already exists.")
+            self.client.get_collection(collection_name = self._collection_name)
         except Exception:
             # If it doesn't exist, create it.
             vector_size = len(self.embedder.embed_query("test"))
             self.client.create_collection(
-                collection_name = self.collection_name,
+                collection_name = self._collection_name,
                 vectors_config = models.VectorParams(size = vector_size, distance = models.Distance.COSINE)
             )
-            print(f"Created new memory collection: '{self.collection_name}' after ensuring no '{self.collection_name}' had been existed before.")
+            print(f"Created new shared memory collection: '{self._collection_name}'")
 
         # Initialize the store attribute
         self.store = QdrantVectorStore(
             client = self.client,
-            collection_name = self.collection_name,
+            collection_name = self._collection_name,
             embedding = self.embedder,
         )
 
 
     def add_memory(self, summary: str):
-        """Adds a new memory summary to the user's collection"""                                 
-        self.store.add_texts([summary])                                 # QdrantVectorStore
-        print(f"Added new memory to collection '{self.collection_name}'")
+        """Adds a new memory summary with user_id in its metadata"""                                 
+        # Create a Document with metadata before adding it
+        memory_doc = Document(
+            page_content = summary,
+            metadata = {"user_id": self.user_id}
+        )
+        self.store.add_documents([memory_doc])
+        print(f"Added new memory to collection '{self._collection_name}' for user '{self.user_id}'")
 
     def get_memories(self, query: str, k: int = 3) -> list[Document]:
-        """Retrieves the most relevant memories for a given query"""
-        retriever = self.store.as_retriever(search_kwargs = {"k": k})   # QdrantVectorStore
-        print(f"Retrieving memories relevant to: '{query}'")
+        """Retrieves the most relevant memories for a given user using a metadata filter"""
+        # A filter is added to the retriever to only search for this user's memories
+        retriever = self.store.as_retriever(        # QdrantVectorStore
+            search_kwargs = {
+                "k": k,
+                "filter": Filter(
+                    must = [FieldCondition(key="metadata.user_id", match=MatchValue(value = self.user_id))]
+                )
+            }
+        )
+        print(f"Retrieving memories for user '{self.user_id}' relevant to: '{query}'")
 
         return retriever.get_relevant_documents(query)
     
