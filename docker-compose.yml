@@ -25,6 +25,7 @@ services:
       timeout: 10s
       retries: 3
 
+  
   # --- Service #2: The Python Application Service
   api:
     # Build and run using the amd64 platform for maximum compatibility on Apple Silicon.
@@ -39,13 +40,32 @@ services:
       - .env
     # This makes the 'api' service wait for the 'qdrant' service to start.
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started
+      ollama:
+        condition: service_started
     container_name: rag_api_service
     networks:
       - agent_network
     # ADD THIS SECTION TO OVERRIDE THE URL from QDRANT_URL="http://localhost:6333" (.env -- for local Terminal running)
     environment:
       - QDRANT_URL=http://qdrant:6333
+      - OLLAMA_URL=http://ollama:11434
+
+  
+  # --- Service #3: The Ollama LLM Service ---
+  ollama:
+    image: ollama/ollama
+    init: true
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_storage:/root/.ollama
+    container_name: ollama_service
+    networks:
+      - agent_network
+    # # The ollama/ollama Docker image does not start up correctly on some Apple Silicon machines without an explicit command
+    # command: ["ollama", "serve"]
 
 
 # --- Top-Level Definitions ---
@@ -59,3 +79,4 @@ networks:
 # Define the named volume for Qdrant's data to be stored persistently
 volumes:
   qdrant_storage:
+  ollama_storage:

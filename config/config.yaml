@@ -9,16 +9,15 @@ vector_db:
 
 # LLM provider settings
 llm:
-  default: openai
+  default: ollama
   openai:
-    chat_model: gpt-4o
-    embedding_model: text-embedding-3-small
+    chat_model: "gpt-4o"
+    embedding_model: "text-embedding-3-small"
     embedding_dims: 1536 # Dimensions for text-embedding-3-small
     api_key_env: OPENAI_API_KEY
   ollama:
-    model: llama2
-    embedding_model: nomic-embed-text
-    embedding_dims: 768 # Dimensions for nomic-embed-text
+    chat_model: "llama3:latest"
+    embedding_model: "nomic-embed-text:latest"
     url: ${OLLAMA_URL}
 
 # Agent settings

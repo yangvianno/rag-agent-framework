@@ -19,7 +19,7 @@ def get_agent_llm():
         )
     else:
         return ChatOllama(
-            model = LLM_CFG["ollama"]["model"],
+            model = LLM_CFG["ollama"]["chat_model"],
             base_url = OLLAMA_URL
         )
     
