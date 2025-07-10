@@ -43,6 +43,9 @@ services:
     container_name: rag_api_service
     networks:
       - agent_network
+    # ADD THIS SECTION TO OVERRIDE THE URL from QDRANT_URL="http://localhost:6333" (.env -- for local Terminal running)
+    environment:
+      - QDRANT_URL=http://qdrant:6333
 
 
 # --- Top-Level Definitions ---

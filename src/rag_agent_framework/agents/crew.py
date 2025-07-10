@@ -1,15 +1,15 @@
 # src/rag_agent_framework/agents/crew.py -- Crew Assembly -- The entire agentic system defintions
-from crewai import Crew, Process
-from .research_agents import document_researcher, general_researcher, manager_agent
-from .tasks import document_researcher_task, general_researcher_task, manager_task
 
-# Define the crew with hierarchical process
+from crewai import Crew, Process
+from .research_agents import document_researcher, general_researcher, report_writer
+from .tasks import document_research_task, web_research_task, writer_task
+
+# Assemble the new sequential crew
 agent_crew = Crew(
-    agents = [manager_agent, document_researcher, general_researcher],
-    tasks = [manager_task, document_researcher_task, general_researcher_task],
-    process = Process.hierarchical,
-    manager_llm = manager_agent.llm,    # Specify the manager agent
-    verbose = True                      # Prints more granular details, useful for understanding how agents are reasoning, which tools are being called, etc
+    agents = [document_researcher, general_researcher, report_writer],
+    tasks = [document_research_task, web_research_task, writer_task],
+    process = Process.sequential,
+    verbose = True
 )
 
 def get_crew():

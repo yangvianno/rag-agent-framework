@@ -25,7 +25,7 @@ def get_agent_llm():
     
 # --- Researcher Agent --- uses the RAG tool
 document_researcher = Agent(
-    role = "Document Researcher",
+    role = "DocumentResearcher",
     goal = "Find and return relevant information from the provided documents.",
     backstory = "You are an expert at searching and extracting information from a document knowledge base. You are known for your ability to find the most relevant and accurate information quickly.",
     tools = [rag_tool],
@@ -36,7 +36,7 @@ document_researcher = Agent(
 
 # --- General Researcher Agent --- search the web, uses SERPAPI_API_KEY in the .env file
 general_researcher = Agent(
-    role = "General Researcher",
+    role = "GeneralResearcher",
     goal = "Find and return general information from the web.",
     backstory = "You are an expert web researcher, skilled at using search engines to find accurate and up-to-date information at any topic.",
     # This agent will have a web search tool added to it automatically by CrewAI
@@ -45,12 +45,12 @@ general_researcher = Agent(
     verbose = True
 )
 
-# --- Manager Agent --- will delegate tasks to the appropriate researcher
-manager_agent = Agent(
-    role = "Project Manager",
-    goal = "Efficiently manage the research process by delegating tasks to the appropriate specialist agent. Review the final answers to ensure they are complete and meet the user's meet.",
-    backstory = "You are an experienced project manager, skilled at analyzing requests and identifying the best person for the job. You break down complex questions and ensure that final product from your team is coherent and valuable.",
+# --- Writer Agent --- synthesizes findings from other agents into a final report.
+report_writer = Agent(
+    role = "ReportWriter",
+    goal = "Write a clear, concise, and accurate summary report based on the research findings provided by other agents.",
+    backstory = "You are an expert technical writer, known for your ability to synthesize complex information from multiple sources into a perfectly formatted and easy-to-understand report that directly answers the user's original question.",
     llm = get_agent_llm(),
-    allow_delegation = True,
+    allow_delegation = False,
     verbose = True
 )

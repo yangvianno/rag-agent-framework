@@ -1,42 +1,33 @@
 # src/rag_agent_framework/agents/tasks.py -- Agent Task Definitions
 
 from crewai import Task
-from .research_agents import document_researcher, general_researcher, manager_agent
+from .research_agents import document_researcher, general_researcher, report_writer
 
-document_researcher_task = Task(
-    description = (
-         "You have been assigned a research task: '{topic}'.\n"
-        "Here is the context from past conversations if available: {context}\n\n"
-        "Your primary goal is to use the 'Document Knowledge Base Tool' to find the answer "
-        "exclusively within the provided documents. You MUST use this tool. "
-        "Produce a detailed, final answer based on your findings."
-    ),
-    expected_output = (
-        "A detailed, final report based *only* on the information found in the documents. "
-        "If no relevant information is found, explicitly state that."
-    ),
-    agent = document_researcher,
+# Task 1: Search the internal documents
+document_research_task = Task(
+    description = "Search the user's private documents for information related to the topic: '{topic}'.",
+    expected_output = "A summary of the findings from the documents. If no relevant information is found, state that clearly.",
+    agent = document_researcher
 )
 
-general_researcher_task = Task(
-    description = (
-        "You have been assigned a research task: '{topic}'.\n"
-        "Here is the context from past conversations if available: {context}\n\n"
-        "Your primary goal is to use your search tools to find information on the web. "
-        "Produce a detailed, final answer based on your findings."
-    ),
-    expected_output = "A comprehensive, final report summarizing the most relevant information from your web search.",
-    agent = general_researcher,
+# Task 2: Search the web
+web_research_task = Task(
+    description = "Search the public web for up-to-date information on the topic: '{topic}'.",
+    expected_output = "A summary of the key findings from the web search.",
+    agent = general_researcher
 )
 
-# --- Manager Task --- This is entry point task that the manager will handle
-manager_task = Task(
+# Task 3: Write the final report
+writer_task = Task(
     description = (
-        "Analyze the user's research topic: '{topic}'. Your ONLY job is to determine the best specialist agent for the task and delegate the work to them. "
-        "If the topic involves comparing information against internal documents, delegate to the 'Document Researcher'. "
-        "If the topic requires external, up-to-the-minute information, delegate to the 'General Researcher'. "
-        "Do not answer the question yourself."
+        "Review the research findings from both the DocumentResearcher and the GeneralResearcher. "
+        "Your job is to synthesize this information into a single, cohesive final report. "
+        "It is critical that you address the user's original question: '{topic}'. "
+        "Explicitly mention if the internal documents contained relevant information or not. "
+        "Then, present the web findings to provide a complete answer."
     ),
-    expected_output = "The final, detailed research report compiled by the specialist agent (either the Document Researcher or General Researcher).",
-    agent = manager_agent
+    expected_output = "A final, comprehensive report that synthesizes all research findings and directly answers the user's original question.",
+    agent = report_writer,
+    # Context is the output of the previous two tasks
+    context = [document_research_task, web_research_task]
 )

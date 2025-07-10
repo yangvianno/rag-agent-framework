@@ -25,7 +25,10 @@ def main():
     args = parser.parse_args()
 
     # Prepare the inputs for the crew's kickoff
-    inputs = {"topic": args.topic}
+    inputs = {
+        "topic": args.topic,
+        "context": "No conversational context provided for this run"
+    }
 
     print(f"🚀 Kicking off the crew for topic: {args.topic}")
     print("-" * 100)
