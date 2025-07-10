@@ -42,7 +42,7 @@ general_researcher = Agent(
     role = "GeneralResearcher",
     goal = "Find and return general information from the web.",
     backstory = "You are an expert web researcher, skilled at using search engines to find accurate and up-to-date information at any topic.",
-    tools = [search_tool],
+    # This agent will have a web search tool added to it automatically by CrewAI
     llm = get_agent_llm(),
     allow_delegation = False,   # In the CrewAI framework, an Agent can (optionally) delegate tasks to other agents.
     verbose = True
