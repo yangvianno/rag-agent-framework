@@ -16,6 +16,7 @@ from langchain_core.runnables       import Runnable                 # Base clas 
 
 from langchain.schema import Document   # Used in RAG workflows to pass around the individual text chunks that also carry context about their origin.
 from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, QDRANT_URL
+from rag_agent_framework.rag.vector_store import get_embedder
     
 def _get_qdrant_client() -> QdrantClient:
     """Helper to get a Qdrant client instance"""

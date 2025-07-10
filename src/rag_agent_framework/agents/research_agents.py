@@ -4,6 +4,9 @@
 
 import os
 from crewai import Agent
+from crewai_tools import DuckDuckGoSearchRun
+search_tool = DuckDuckGoSearchRun()     # Instantiate the tool
+
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models.ollama import ChatOllama
 
@@ -39,7 +42,7 @@ general_researcher = Agent(
     role = "GeneralResearcher",
     goal = "Find and return general information from the web.",
     backstory = "You are an expert web researcher, skilled at using search engines to find accurate and up-to-date information at any topic.",
-    # This agent will have a web search tool added to it automatically by CrewAI
+    tools = [search_tool],
     llm = get_agent_llm(),
     allow_delegation = False,   # In the CrewAI framework, an Agent can (optionally) delegate tasks to other agents.
     verbose = True
