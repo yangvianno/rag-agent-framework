@@ -5,8 +5,8 @@ from .tasks import document_researcher_task, general_researcher_task, manager_ta
 
 # Define the crew with hierarchical process
 agent_crew = Crew(
-    agents = [document_researcher, general_researcher, manager_agent],
-    tasks = [manager_task],             # The manager task is the entry point. The manager will delegate the other tasks.
+    agents = [manager_agent, document_researcher, general_researcher],
+    tasks = [manager_task, document_researcher_task, general_researcher_task],
     process = Process.hierarchical,
     manager_llm = manager_agent.llm,    # Specify the manager agent
     verbose = True                      # Prints more granular details, useful for understanding how agents are reasoning, which tools are being called, etc

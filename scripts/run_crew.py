@@ -19,7 +19,7 @@ load_dotenv()
 from rag_agent_framework.agents.crew import agent_crew      # instead of get_crew for more flexible, recreate the crew dynamically, change its config, etc.
 
 def main():
-    """A command-line interface tp run the agentic crew"""
+    """A command-line interface to run the agentic crew"""
     parser = argparse.ArgumentParser(description="Run the agentic crew with a specific tasks")
     parser.add_argument("topic", type=str, help="The topic of the question for the crew to research")
     args = parser.parse_args()
