@@ -63,6 +63,9 @@ COPY src ./src
 # Copy the configuration directory into the container
 COPY config ./config
 
+# Copy the scripts directory into the container
+COPY scripts ./scripts
+
 # Set the PATH to use the virtual environment's Python interpreter
 ENV PATH="/app/.venv/bin:$PATH"
 

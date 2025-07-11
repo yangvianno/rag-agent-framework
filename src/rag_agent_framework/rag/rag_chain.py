@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 
-from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, RETRIEVER_K
+from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, RETRIEVER_CFG
 from rag_agent_framework.rag.vector_store import get_vector_store, get_embedder
 
 ### This template is the instruction for the LLM.
@@ -55,7 +55,7 @@ def get_rag_chain(collection_name: str, url: str):
     
     # Get the vector store and retriever
     vector_store = get_vector_store(collection_name=collection_name, url=url)
-    retriever = vector_store.as_retriever(search_kwargs={"k": RETRIEVER_K})
+    retriever = vector_store.as_retriever(search_kwargs={"k": RETRIEVER_CFG.get("k", 4)})
 
     # Create the prompt template
     prompt = ChatPromptTemplate.from_template(RAG_PROMPT_TEMPLATE)
