@@ -4,8 +4,6 @@
 
 import os
 from crewai import Agent
-from crewai_tools import DuckDuckGoSearchRun
-search_tool = DuckDuckGoSearchRun()     # Instantiate the tool
 
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models.ollama import ChatOllama

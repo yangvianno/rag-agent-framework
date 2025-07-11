@@ -29,6 +29,7 @@ class MemoryStore:
     _collection_name = "user_memory_store"      # The collection name is now a fixed, shared constant
 
     def __init__(self, user_id: str):
+        """Initializes the memory store for a specific user."""
         self.user_id = user_id
         self.embedder = get_embedder()
         self.client = _get_qdrant_client()
@@ -39,6 +40,7 @@ class MemoryStore:
         except Exception:
             # If it doesn't exist, create it.
             vector_size = len(self.embedder.embed_query("test"))
+            # Create the collection because it does not exist
             self.client.create_collection(
                 collection_name = self._collection_name,
                 vectors_config = models.VectorParams(size = vector_size, distance = models.Distance.COSINE)
@@ -70,13 +72,13 @@ class MemoryStore:
             search_kwargs = {
                 "k": k,
                 "filter": Filter(
-                    must = [FieldCondition(key="metadata.user_id", match=MatchValue(value = self.user_id))]
+                    must = [FieldCondition(key="user_id", match=MatchValue(value = self.user_id))]
                 )
             }
         )
         print(f"Retrieving memories for user '{self.user_id}' relevant to: '{query}'")
 
-        return retriever.get_relevant_documents(query)
+        return retriever.invoke(query)
     
 # --- Summarizer Chain ---
 SUMMARIZER_PROMPT_TEMPLATE = """
