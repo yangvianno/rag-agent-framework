@@ -41,7 +41,7 @@ def main():
         # 2. Prepare the inputs for the crew
         inputs = {
             "topic": question,
-            "context": f"Relevant past conversations:\n{past_memories}"
+            "context": f"Relevant past conversations:\n{past_memories_str}"
         }
 
         # 3. Run the crew

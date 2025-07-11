@@ -2,15 +2,18 @@
 
 import io
 import os
-from crewai import Crew
-from fastapi import FastAPI, HTTPException, Body, UploadFile, File, Form
-from pydantic import BaseModel, Field
-from typing import Optional
-from fastapi.concurrency import run_in_threadpool # For running sync code in async endpoints
+from crewai                                 import Crew
+from fastapi                                import FastAPI, HTTPException, Body, UploadFile, File, Form
+from pydantic                               import BaseModel, Field
+from typing                                 import Optional
+from fastapi.concurrency                    import run_in_threadpool # For running sync code in async endpoints
+from langchain_core.messages                import HumanMessage
+from langchain_openai                       import ChatOpenAI
+from langchain_community.chat_models.ollama import ChatOllama
 
 from rag_agent_framework.agents.crew import agent_crew
 from rag_agent_framework.rag.memory  import MemoryStore, get_summarizer
-from rag_agent_framework.core.config import AGENT_CFG, QDRANT_URL
+from rag_agent_framework.core.config import AGENT_CFG, QDRANT_URL, LLM_CFG, OLLAMA_URL, OPENAI_API_KEY
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -45,6 +48,62 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
         manages conversation memory, and returns the final answer
         This logic is adapted from scripts/chat.py
     """
+    
+    
+
+
+    
+    # --- START: TEMPORARY DEBUGGING CODE ---
+    print("\n--- Starting direct LLM connection test (Temporary Debugging) ---")
+    try:
+        if LLM_CFG["default"] == "openai":
+            llm_instance = ChatOpenAI(
+                model=LLM_CFG["openai"]["chat_model"],
+                openai_api_key=OPENAI_API_KEY,
+                temperature=0,
+                verbose=True
+            )
+            print(f"Initialized ChatOpenAI with model: {llm_instance.model}")
+
+        elif LLM_CFG["default"] == "ollama": # Assuming LLM_CFG["default"] == "ollama"
+            llm_instance = ChatOllama(
+                model=LLM_CFG["ollama"]["chat_model"],
+                base_url=OLLAMA_URL,
+                temperature=0,
+                verbose=True
+            )
+            print(f"Initialized ChatOllama with model: {llm_instance.model}, base_url: {llm_instance.base_url}")
+        else:
+            print("Error in test: Default LLM not configured or not supported in test script.")
+            raise HTTPException(status_code=500, detail="LLM configuration for test is invalid.")
+
+        print("Invoking LLM with a simple prompt in test...")
+        # Use run_in_threadpool for the blocking LLM call within an async endpoint
+        test_response = await run_in_threadpool(llm_instance.invoke, [HumanMessage(content="Hello, how are you?")])
+        
+        print("\n--- LLM Test Successful (Temporary Debugging) ---")
+        print("Test response content:", test_response.content)
+        
+    except Exception as e:
+        print("\n--- LLM Test FAILED (Temporary Debugging) ---")
+        print(f"An error occurred during direct LLM test: {type(e).__name__}")
+        print("Test Error details:", str(e))
+        import traceback
+        traceback.print_exc() # Print full traceback
+        # Re-raise the exception or raise an HTTPException to indicate the test failed
+        raise HTTPException(
+            status_code=500,
+            detail=f"LLM direct test failed: {type(e).__name__} - {str(e)}. Check server logs for full traceback."
+        )
+    print("\n--- Continuing with main chat logic ---")
+    # --- END: TEMPORARY DEBUGGING CODE ---
+    
+    
+
+    
+    
+    
+    
     print(f"Received chat request for user '{request.user_id}' with question: '{request.question}'")
     try:
         # 1. Initialize memory store for the user

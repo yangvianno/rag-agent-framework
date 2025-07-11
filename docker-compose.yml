@@ -1,21 +1,18 @@
 # docker-compose.yml
 
 services:
-  # --- Service #1: The Qdrant Database Service ---
+  # --- Service #1: The Qdrant Vector Database Service ---
   qdrant:
-    platform: linux/amd64
+    platform: linux/amd64 # Specify platform for compatibility
     image: qdrant/qdrant:latest
     ports:
       - "6333:6333" # REST API
       - "6334:6334" # gRPC
-    # This 'volumes' section mounts a local directory into the container.
-    # Use a named volume for persistent storage, managed by Docker.
     volumes:
-      - ./qdrant_storage:/qdrant/storage
+      - qdrant_storage:/qdrant/storage # Persistent storage for Qdrant data
     container_name: qdrant_db
     networks:
       - agent_network
-    # Ensures the api service only starts after Qdrant is fully operational, not just when the container has started
     healthcheck:
       test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
       interval: 10s
@@ -23,70 +20,65 @@ services:
       retries: 5
       start_period: 30s
 
-  
-  # --- Service #2: The Python Application Service
+  # --- Service #2: The Ollama LLM Service ---
+  ollama:
+    build: ./ollama_custom # Build from the custom Ollama Dockerfile
+    init: true # Ensure proper process supervision for Ollama
+    ports:
+      - "11434:11434" # Ollama API port
+    volumes:
+      - ollama_storage:/root/.ollama # Persistent storage for Ollama models
+    container_name: ollama_service
+    networks:
+      - agent_network
+    healthcheck:
+      # Check if Ollama is running and the specific embedding model is pulled
+      test: ["CMD-SHELL", "ollama list | grep -q 'nomic-embed-text'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s # Allow extra time for model download
+
+  # --- Service #3: The Python Application (FastAPI) Service ---
   api:
-    # Build and run using the amd64 platform for maximum compatibility on Apple Silicon.
-    platform: linux/amd64
-    build:  # Build the image from the Dockerfile in the current directory
-      context: .
+    platform: linux/amd64 # Specify platform for compatibility
+    build:
+      context: . # Build using the Dockerfile in the current directory (project root)
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
-    # Pass environment variables from the local .env file into the container.
+      - "8000:8000" # FastAPI application port
     env_file:
-      - .env
-    # This makes the 'api' service wait for the 'qdrant' service to start.
+      - .env # Load environment variables from the local .env file
     depends_on:
       qdrant:
-        condition: service_healthy
+        condition: service_healthy # Ensure Qdrant is healthy before starting API
       ollama:
-        condition: service_healthy
+        condition: service_healthy # Ensure Ollama is healthy before starting API
     container_name: rag_api_service
     networks:
       - agent_network
-    # ADD THIS SECTION TO OVERRIDE THE URL from QDRANT_URL="http://localhost:6333" (.env -- for local Terminal running)
     environment:
+      # Override URLs for inter-service communication within the Docker network
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
+      - LANGCHAIN_VERBOSE=1
+      - LANGCHAIN_DEBUG=1
+      - LOG_LEVEL=DEBUG
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"] # Adjust to your actual health endpoint
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"] # Health check for FastAPI
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 10s
     volumes:
+      # Mount the local 'data' directory for document ingestion via API or scripts
       - ./data:/app/ingest_data
 
-  
-  # --- Service #3: The Ollama LLM Service ---
-  ollama:
-    build: ./ollama_custom
-    init: true
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_storage:/root/.ollama
-    container_name: ollama_service
-    networks:
-      - agent_network
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list | grep -q 'nomic-embed-text'"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
-
-
 # --- Top-Level Definitions ---
-# These must be at the root of the file (no indentation).
-
-# Define the shared network for our services to communicate
 networks:
   agent_network:
-    driver: bridge
+    driver: bridge # Define a shared bridge network for services
 
-# Define the named volume for Qdrant's data to be stored persistently
 volumes:
-  qdrant_storage:
-  ollama_storage:
+  qdrant_storage: # Named volume for Qdrant persistence
+  ollama_storage: # Named volume for Ollama model persistence

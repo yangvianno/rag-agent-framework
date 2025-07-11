@@ -2,16 +2,17 @@
 
 import io       # Needed to handle files uploaded through the API as in-memory binary streams.
 import os
+import tempfile
 # --- Qdrant and LangChain Imports ---
 from langchain.schema                       import Document       # Used in RAG workflows to pass around the individual text chunks that also carry context about their origin.
 from langchain_openai                       import ChatOpenAI
 from langchain_community.chat_models.ollama import ChatOllama
 from langchain.prompts                      import ChatPromptTemplate
-from qdrant_client                          import QdrantClient
+from qdrant_client                          import QdrantClient, models
 # --- Project-Specific Imports: The RAG Tools ---
 from rag_agent_framework.rag.data_loader import load_documents
 from rag_agent_framework.rag.text_splitter import split_documents
-from rag_agent_framework.rag.vector_store import get_vector_store
+from rag_agent_framework.rag.vector_store import get_vector_store, get_embedder
 from rag_agent_framework.core.config import *
 
 
@@ -38,6 +39,27 @@ class MemoryStore:
 
         # Instantiate necessary clients and the vector store itself -- keeping the class self-contained
         self.client       = _get_qdrant_client()
+
+# --- START: ADDED CODE to ensure user-specific collection exists ---
+        try:
+            # Attempt to get the collection; if it doesn't exist, an exception will be raised
+            self.client.get_collection(collection_name=self.collection_name)
+            print(f"Collection '{self.collection_name}' already exists for user '{self.user_id or self.collection_name}'.")
+        except Exception as e: # Catch any exception, specifically 'NotFoundError' from Qdrant
+            print(f"Collection '{self.collection_name}' not found for user '{self.user_id or self.collection_name}'. Creating new collection.")
+            
+            # Determine vector size using the embedder
+            embedder = get_embedder() 
+            vector_size = len(embedder.embed_query("test query")) 
+            
+            # Create the new collection
+            self.client.recreate_collection( # Using recreate_collection here for simplicity, create_collection is also an option if you don't want to inadvertently clear an existing one
+                collection_name=self.collection_name,
+                vectors_config=models.VectorParams(size=vector_size, distance=models.Distance.COSINE)
+            )
+            print(f"Successfully created collection '{self.collection_name}' for user '{self.user_id or self.collection_name}'.")
+        # --- END: ADDED CODE ---
+
         self.vector_store = get_vector_store(
             collection_name = self.collection_name,
             url = url
@@ -61,6 +83,12 @@ class MemoryStore:
         # 1. Temporarily save the uploaded file to 
         temp_file_path = f"./{file_obj.name}"
         with open(file_obj.name, "wb") as f: f.write(file_obj.getbuffer())
+
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file_obj.name).suffix) as temp_file:
+            temp_file.write(file_obj.getbuffer())
+            temp_file_path = temp_file.name
+
         
         # 2. Call the Prep Station (data_loader.py)
         print(f"👨‍🍳 -> Calling data_loader to process file: {temp_file_path}")

@@ -16,8 +16,8 @@ llm:
     embedding_dims: 1536 # Dimensions for text-embedding-3-small
     api_key_env: OPENAI_API_KEY
   ollama:
-    chat_model: "llama3:latest"
-    embedding_model: "nomic-embed-text:latest"
+    chat_model: "llama3:latest"                   # docker exec -it ollama_service ollama pull llama3:latest
+    embedding_model: "nomic-embed-text:latest"    # docker exec -it ollama_service ollama pull nomic-embed-text:latest
     url: ${OLLAMA_URL}
 
 # Agent settings
