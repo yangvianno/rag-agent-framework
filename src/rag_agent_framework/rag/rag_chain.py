@@ -1,6 +1,7 @@
 # src/rag_agent_framework/rag/rag_chain.py
 
 import os 
+from qdrant_client import QdrantClient, models
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models.ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
@@ -9,7 +10,7 @@ from langchain_core.output_parsers import StrOutputParser
 
 
 from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, RETRIEVER_K
-from rag_agent_framework.rag.vector_store import get_vector_store
+from rag_agent_framework.rag.vector_store import get_vector_store, get_embedder
 
 ### This template is the instruction for the LLM.
 RAG_PROMPT_TEMPLATE = """
@@ -33,6 +34,25 @@ def get_rag_chain(collection_name: str, url: str):
         llm = ChatOllama(model = LLM_CFG["ollama"]["chat_model"],
                          base_url = OLLAMA_URL)
         
+    
+    # --- START: ADDED CODE TO CREATE COLLECTION ---
+    # This logic ensures the collection exists before trying to use it.
+    client = QdrantClient(url=url)
+    try:
+        client.get_collection(collection_name=collection_name)
+        print(f"Collection '{collection_name}' already exists.")
+    except Exception:
+        print(f"Collection '{collection_name}' not found. Creating new collection.")
+        embedder = get_embedder()
+        vector_size = len(embedder.embed_query("test query"))
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=models.VectorParams(size=vector_size, distance=models.Distance.COSINE)
+        )
+        print(f"Successfully created collection '{collection_name}'.")
+    # --- END: ADDED CODE ---
+    
+    
     # Get the vector store and retriever
     vector_store = get_vector_store(collection_name=collection_name, url=url)
     retriever = vector_store.as_retriever(search_kwargs={"k": RETRIEVER_K})

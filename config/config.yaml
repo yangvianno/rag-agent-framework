@@ -28,4 +28,6 @@ agent:
 
 # Retriever settings
 retriever:
-  k: 4    # Number of documents to retrieve
+  k: 4              # Number of documents to retrieve
+  chunk_size: 1000     
+  chunk_overlap: 200

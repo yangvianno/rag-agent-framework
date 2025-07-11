@@ -1,86 +1,90 @@
 # src/rag_agent_framework/rag/memory.py -- Manage per-user Qdrant memory collections and summarization
 
+import io       # Needed to handle files uploaded through the API as in-memory binary streams.
 import os
-from qdrant_client import QdrantClient, models
-from qdrant_client.models import Filter, FieldCondition, MatchValue
+# --- Qdrant and LangChain Imports ---
+from langchain.schema                       import Document       # Used in RAG workflows to pass around the individual text chunks that also carry context about their origin.
+from langchain_openai                       import ChatOpenAI
+from langchain_community.chat_models.ollama import ChatOllama
+from langchain.prompts                      import ChatPromptTemplate
+from qdrant_client                          import QdrantClient
+# --- Project-Specific Imports: The RAG Tools ---
+from rag_agent_framework.rag.data_loader import load_documents
+from rag_agent_framework.rag.text_splitter import split_documents
+from rag_agent_framework.rag.vector_store import get_vector_store
+from rag_agent_framework.core.config import *
 
-from langchain_qdrant import QdrantVectorStore                      # Wraps Qdrant into a vectorStore interface that LangChain chains&retrievers can use, instead of calling QdrantClient directly
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
-from langchain_community.embeddings.ollama  import OllamaEmbeddings 
-from langchain_community.chat_models.ollama import ChatOllama       # Chat-based LLM interface for Ollama models
 
-from langchain_core.prompts         import ChatPromptTemplate       # Defines structured prompt templates to chat models
-from langchain_core.output_parsers  import StrOutputParser
-from langchain_core.runnables       import Runnable                 # Base clas for anything can be "run" in LangChain pipeline (models, chains, retrievers, etc.)
-
-from langchain.schema import Document   # Used in RAG workflows to pass around the individual text chunks that also carry context about their origin.
-from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, QDRANT_URL
-from rag_agent_framework.rag.vector_store import get_embedder
-    
+# ==============================================================================
+# 1. HELPER FUNCTION
+# ==============================================================================
 def _get_qdrant_client() -> QdrantClient:
     """Helper to get a Qdrant client instance"""
-    return QdrantClient(url = QDRANT_URL)
+    return QdrantClient(url=QDRANT_URL)
 
-# --- Memory Store Class ---
+
+# ==============================================================================
+# 2. THE MemoryStore CLASS -- handle the two distinct memory types (Personal chat history for each user & A general knowledge library from uploaded documents)
+# ==============================================================================
+
 class MemoryStore:
-    """Manages user-specific memories within a single, shared Qdrant collection."""
-    
-    _collection_name = "user_memory_store"      # The collection name is now a fixed, shared constant
+    def __init__(self, user_id: str = None, collection_name: str = None, url: str = QDRANT_URL):
+        if user_id: self.collection_name = f"user_{user_id}_memory"                     # For /chat endpoint for conversation history
+        else:       self.collection_name = collection_name or "my_rag_collection"       # For /upload endpoint for the document knowledge base
 
-    def __init__(self, user_id: str):
-        """Initializes the memory store for a specific user."""
+        # Store the user_id if it exists, for tagging memories later
         self.user_id = user_id
-        self.embedder = get_embedder()
-        self.client = _get_qdrant_client()
 
-        # This logic now ensures the SINGLE shared collection exists. It will only create the collection on the very first run for any user.
-        try:
-            self.client.get_collection(collection_name = self._collection_name)
-        except Exception:
-            # If it doesn't exist, create it.
-            vector_size = len(self.embedder.embed_query("test"))
-            # Create the collection because it does not exist
-            self.client.create_collection(
-                collection_name = self._collection_name,
-                vectors_config = models.VectorParams(size = vector_size, distance = models.Distance.COSINE)
-            )
-            print(f"Created new shared memory collection: '{self._collection_name}'")
-
-        # Initialize the store attribute
-        self.store = QdrantVectorStore(
-            client = self.client,
-            collection_name = self._collection_name,
-            embedding = self.embedder,
+        # Instantiate necessary clients and the vector store itself -- keeping the class self-contained
+        self.client       = _get_qdrant_client()
+        self.vector_store = get_vector_store(
+            collection_name = self.collection_name,
+            url = url
         )
 
-
-    def add_memory(self, summary: str):
-        """Adds a new memory summary with user_id in its metadata"""                                 
-        # Create a Document with metadata before adding it
-        memory_doc = Document(
-            page_content = summary,
-            metadata = {"user_id": self.user_id}
-        )
-        self.store.add_documents([memory_doc])
-        print(f"Added new memory to collection '{self._collection_name}' for user '{self.user_id}'")
-
-    def get_memories(self, query: str, k: int = 3) -> list[Document]:
-        """Retrieves the most relevant memories for a given user using a metadata filter"""
-        # A filter is added to the retriever to only search for this user's memories
-        retriever = self.store.as_retriever(        # QdrantVectorStore
-            search_kwargs = {
-                "k": k,
-                "filter": Filter(
-                    must = [FieldCondition(key="user_id", match=MatchValue(value = self.user_id))]
-                )
-            }
-        )
-        print(f"Retrieving memories for user '{self.user_id}' relevant to: '{query}'")
-
-        return retriever.invoke(query)
+    # --- Methods for User Conversation Memory ---
+    def get_memories(self, query: str, k: int = 5) -> list[Document]:
+        """Retrieves the top 'k' most relevant chat summaries for a user by performing a vector similarity search"""
+        print(f"🧠 Searching collection '{self.collection_name}' for memories relevant to: '{query}'")
+        return self.vector_store.similarity_search(query, k=k)
     
-# --- Summarizer Chain ---
+    def add_memory(self, text: str):
+        """Adds a new chat summary to the user's specific collection. This summary is wrapped in a Document object with user_id metadata"""
+        doc = Document(page_content = text, metadata = {"user_id": self.user_id})
+        self.vector_store.add_documents([doc])
+        print(f"📝 Added memory to '{self.collection_name}' for user '{self.user_id}'")
+
+    # --- Method for General Document Storage (The "Head Chef") --- 
+    def add_document(self, file_obj: io.BytesIO):
+        """Orchestrates the document processing pipeline by calling the specialized RAG tools in the correct order"""
+        # 1. Temporarily save the uploaded file to 
+        temp_file_path = f"./{file_obj.name}"
+        with open(file_obj.name, "wb") as f: f.write(file_obj.getbuffer())
+        
+        # 2. Call the Prep Station (data_loader.py)
+        print(f"👨‍🍳 -> Calling data_loader to process file: {temp_file_path}")
+        documents = load_documents(temp_file_path)
+        
+        os.remove(temp_file_path)
+
+        if not documents:
+            print(f"⚠️ Warning: Data loader could not extract content from {file_obj.name}.")
+            return
+
+        # 3. Call the Chopping Station (text_splitter.py).
+        print(f"🔪 -> Calling text_splitter to chunk {len(documents)} document(s).")
+        chunked_documents = split_documents(documents)
+        
+        # 4. Call the Line Cook (vector_store) to save the final product.
+        print(f"✅ -> Storing {len(chunked_documents)} chunks in the vector store.")
+        self.vector_store.add_documents(chunked_documents)
+        print(f"Successfully added '{file_obj.name}' to the '{self.collection_name}' knowledge base.")
+
+        
+# ==============================================================================
+# 3. SUMMARIZER HELPER FUNCTION
+# ==============================================================================
 SUMMARIZER_PROMPT_TEMPLATE = """
 Summarize the following conversation into a concise 2-3 sentence memory segment that captures the key information and user intent.
 
@@ -88,8 +92,8 @@ CONVERSATION:
 {text}
 """
 
-def get_summarizer() -> Runnable:
-    """Builds and returns a modern summarizer chain using LCEL"""
+def get_summarizer():
+    """Builds and returns a simple and reusable LangChain (LCEL) chain that takes text and produces a summary"""
     if LLM_CFG["default"] == "openai":
         llm = ChatOpenAI(
             model = LLM_CFG["openai"]["chat_model"],
@@ -100,10 +104,6 @@ def get_summarizer() -> Runnable:
             model = LLM_CFG["ollama"]["chat_model"],
             base_url = OLLAMA_URL
         )
+    prompt = ChatPromptTemplate.from_template(SUMMARIZER_PROMPT_TEMPLATE)       # Use modern LCEL chain syntax
     
-    prompt = ChatPromptTemplate.from_template(SUMMARIZER_PROMPT_TEMPLATE)
-
-    # Use modern LCEL chain syntax
-    summarizer_chain = prompt | llm | StrOutputParser()
-
-    return summarizer_chain
+    return prompt | llm

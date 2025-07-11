@@ -21,7 +21,7 @@ with open(config_path, "r") as f:
 VECTOR_DB_CFG = _cfg.get("vector_db", {})
 LLM_CFG       = _cfg.get("llm", {})
 AGENT_CFG     = _cfg.get("agent", {})
-RETRIEVER_K   = _cfg.get("retriever", {}).get("k", 4)
+RETRIEVER_CFG = _cfg.get("retriever", {})
 
 # 4. Pull keys from environment
 OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY")

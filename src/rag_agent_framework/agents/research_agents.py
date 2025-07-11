@@ -12,17 +12,16 @@ from rag_agent_framework.tools.rag_tool import rag_tool
 from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL
 
 # Get the LLM for the agents
-def get_agent_llm():
-    if LLM_CFG["default"] == "openai":
-        return ChatOpenAI(
-            model = LLM_CFG["openai"]["chat_model"],
-            openai_api_key = OPENAI_API_KEY
-        )
-    else:
-        return ChatOllama(
-            model = LLM_CFG["ollama"]["chat_model"],
-            base_url = OLLAMA_URL
-        )
+if LLM_CFG["default"] == "openai":
+    llm = ChatOpenAI(
+        model = LLM_CFG["openai"]["chat_model"],
+        openai_api_key = OPENAI_API_KEY
+    )
+else:
+    llm = ChatOllama(
+        model = LLM_CFG["ollama"]["chat_model"],
+        base_url = OLLAMA_URL
+    )
     
 # --- Researcher Agent --- uses the RAG tool
 document_researcher = Agent(
@@ -30,7 +29,7 @@ document_researcher = Agent(
     goal = "Find and return relevant information from the provided documents.",
     backstory = "You are an expert at searching and extracting information from a document knowledge base. You are known for your ability to find the most relevant and accurate information quickly.",
     tools = [rag_tool],
-    llm = get_agent_llm(),
+    llm = llm,
     allow_delegation = False,   # In the CrewAI framework, an Agent can (optionally) delegate tasks to other agents.
     verbose = True,
 )
@@ -41,7 +40,7 @@ general_researcher = Agent(
     goal = "Find and return general information from the web.",
     backstory = "You are an expert web researcher, skilled at using search engines to find accurate and up-to-date information at any topic.",
     # This agent will have a web search tool added to it automatically by CrewAI
-    llm = get_agent_llm(),
+    llm = llm,
     allow_delegation = False,   # In the CrewAI framework, an Agent can (optionally) delegate tasks to other agents.
     verbose = True
 )
@@ -51,7 +50,7 @@ report_writer = Agent(
     role = "ReportWriter",
     goal = "Write a clear, concise, and accurate summary report based on the research findings provided by other agents.",
     backstory = "You are an expert technical writer, known for your ability to synthesize complex information from multiple sources into a perfectly formatted and easy-to-understand report that directly answers the user's original question.",
-    llm = get_agent_llm(),
+    llm = llm,
     allow_delegation = False,
     verbose = True
 )

@@ -1,13 +1,16 @@
 # src/rag_agent_framework/api/server.py -- The main FastAPI server, adapting the logic from chat.py
 
-from fastapi import FastAPI, HTTPException, Body
+import io
+import os
+from crewai import Crew
+from fastapi import FastAPI, HTTPException, Body, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from typing import Optional
 from fastapi.concurrency import run_in_threadpool # For running sync code in async endpoints
 
 from rag_agent_framework.agents.crew import agent_crew
 from rag_agent_framework.rag.memory  import MemoryStore, get_summarizer
-from rag_agent_framework.core.config import AGENT_CFG
+from rag_agent_framework.core.config import AGENT_CFG, QDRANT_URL
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -89,4 +92,39 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
         raise HTTPException(
             status_code = 500,
             detail = "An error occurred while processing your request with the agent crew. Please check the server logs for details."
+        )
+    
+@app.post("/upload", summary="Upload a document to the knowledge base")
+async def upload_document(
+    collection_name: str = Form("my_rag_collection"), 
+    file: UploadFile = File(...)
+):
+    """
+    Uploads a document to the specified Qdrant collection. This is used 
+    to populate the knowledge base for the document_researcher agent.
+    """
+    print(f"Received file '{file.filename}' for collection '{collection_name}'")
+    try:
+        # Read the file content into an in-memory object
+        file_content = await file.read()
+        temp_file = io.BytesIO(file_content)
+        temp_file.name = file.filename
+
+        # [Inference] This MemoryStore is used to access the vector DB.
+        # We initialize it with a collection_name instead of a user_id
+        # to target the general knowledge base.
+        doc_store = MemoryStore(collection_name=collection_name, url=QDRANT_URL)
+        
+        # Add the document to the vector store
+        await run_in_threadpool(doc_store.add_document, temp_file)
+        
+        print(f"Successfully processed and stored '{file.filename}'")
+        return {"message": f"Successfully uploaded {file.filename} to collection '{collection_name}'."}
+
+    except Exception as e:
+        print(f"Error during file upload: {e}")
+        print(f"Error details: {repr(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during file upload: {str(e)}"
         )

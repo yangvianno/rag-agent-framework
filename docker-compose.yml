@@ -53,7 +53,7 @@ services:
   
   # --- Service #3: The Ollama LLM Service ---
   ollama:
-    image: ollama/ollama
+    build: ./ollama_custom
     init: true
     ports:
       - "11434:11434"
@@ -63,11 +63,10 @@ services:
     networks:
       - agent_network
     healthcheck:
-      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/11434' || exit 1"]
+      test: ["CMD-SHELL", "ollama list | grep -q 'nomic-embed-text'"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
     # # The ollama/ollama Docker image does not start up correctly on some Apple Silicon machines without an explicit command
     # command: ["ollama", "serve"]
 
