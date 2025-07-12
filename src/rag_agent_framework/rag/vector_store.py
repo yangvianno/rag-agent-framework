@@ -16,7 +16,8 @@ def get_embedder():
     else:
         return OllamaEmbeddings(
             model = LLM_CFG["ollama"]["embedding_model"],
-            base_url = OLLAMA_URL
+            base_url = OLLAMA_URL,
+            num_ctx = 2048 # Explicitly set context size
         )
 
 
@@ -39,7 +40,8 @@ def get_vector_store(collection_name: str, url: str) -> QdrantVectorStore:
     else:
         embeddings = OllamaEmbeddings(
             model = LLM_CFG["ollama"]["embedding_model"],
-            base_url = OLLAMA_URL
+            base_url = OLLAMA_URL,
+            num_ctx = 2048
         )
 
     # 2. Initialize Qdrant client

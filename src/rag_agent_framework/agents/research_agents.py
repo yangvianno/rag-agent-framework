@@ -20,7 +20,8 @@ if LLM_CFG["default"] == "openai":
 else:
     llm = ChatOllama(
         model = LLM_CFG["ollama"]["chat_model"],
-        base_url = OLLAMA_URL
+        base_url = OLLAMA_URL,
+        request_timeout = 300
     )
     
 # --- Researcher Agent --- uses the RAG tool

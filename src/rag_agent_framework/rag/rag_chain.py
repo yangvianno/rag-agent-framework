@@ -32,7 +32,8 @@ def get_rag_chain(collection_name: str, url: str):
                          openai_api_key = OPENAI_API_KEY)
     else:
         llm = ChatOllama(model = LLM_CFG["ollama"]["chat_model"],
-                         base_url = OLLAMA_URL)
+                         base_url = OLLAMA_URL,
+                         request_timeout = 300)
         
     
     # --- START: ADDED CODE TO CREATE COLLECTION ---

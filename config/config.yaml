@@ -9,15 +9,16 @@ vector_db:
 
 # LLM provider settings
 llm:
-  default: ollama
+  default: openai
   openai:
     chat_model: "gpt-4o"
     embedding_model: "text-embedding-3-small"
     embedding_dims: 1536 # Dimensions for text-embedding-3-small
     api_key_env: OPENAI_API_KEY
   ollama:
-    chat_model: "llama3:latest"                   # docker exec -it ollama_service ollama pull llama3:latest
+    chat_model: "phi3:mini"                   # docker exec -it ollama_service ollama pull phi3:mini
     embedding_model: "nomic-embed-text:latest"    # docker exec -it ollama_service ollama pull nomic-embed-text:latest
+    embedding_dims: 384
     url: ${OLLAMA_URL}
 
 # Agent settings
