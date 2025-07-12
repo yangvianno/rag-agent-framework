@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import yaml
 from dotenv import load_dotenv
+from box import Box
 
 # 1. Load environment variables from .env at project root
 #    core/ → rag_agent_framework/ → src/ → project root
@@ -30,3 +31,5 @@ OLLAMA_URL         = os.getenv("OLLAMA_URL")
 QDRANT_URL         = os.getenv("QDRANT_URL")
 SERPAPI_API_KEY    = os.getenv("SERPAPI_API_KEY")
 
+# Create a importable object
+config = Box(_cfg)

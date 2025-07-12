@@ -56,8 +56,8 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
 
         # 2. Retrieve relevant memories
         print(f"Retrieving memories for query: {request.question}")
-        relevant_memories = memory_store.get_memories(query=request.question)
-        memory_context = "\n".join([mem.page_content for mem in relevant_memories])
+        relevant_memories   = memory_store.get_memories(query = request.question)
+        memory_context      = "\n".join([mem.page_content for mem in relevant_memories])
         print(f"Retrieved context: {memory_context}")
 
         # 3. Prepare inputs for the crew, including the memory context
@@ -73,17 +73,17 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
         print(f"Crew finished with result: {result}")
 
         # 5. Summarize the interaction for long-term memory
-        summarizer_chain = get_summarizer()
+        summarizer_chain          = get_summarizer()
         conversation_to_summarize = f"User Question: {request.question}\nAgent Answer: {result}"
-        llm_response = await run_in_threadpool(summarizer_chain.invoke, {"text": conversation_to_summarize})
-        summary = llm_response.content
+        llm_response              = await run_in_threadpool(summarizer_chain.invoke, {"text": conversation_to_summarize})
+        summary                   = llm_response.content
 
         # 6. Add the new summary to the memory store
         memory_store.add_memory(summary)
 
         return ChatResponse(
-            answer = str(result),
-            user_id = request.user_id,
+            answer         = str(result),
+            user_id        = request.user_id,
             memory_summary = summary
         )
 
@@ -95,13 +95,13 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
         # Sends the user a friendly, generic message
         raise HTTPException(
             status_code = 500,
-            detail = "An error occurred while processing your request with the agent crew. Please check the server logs for details."
+            detail      = "An error occurred while processing your request with the agent crew. Please check the server logs for details."
         )
     
 @app.post("/upload", summary="Upload a document to the knowledge base")
 async def upload_document(
     collection_name: str = Form("my_rag_collection"), 
-    file: UploadFile = File(...)
+    file: UploadFile     = File(...)
 ):
     """
     Uploads a document to the specified Qdrant collection. This is used 
@@ -110,13 +110,11 @@ async def upload_document(
     print(f"Received file '{file.filename}' for collection '{collection_name}'")
     try:
         # Read the file content into an in-memory object
-        file_content = await file.read()
-        temp_file = io.BytesIO(file_content)
-        temp_file.name = file.filename
+        file_content    = await file.read()
+        temp_file       = io.BytesIO(file_content)
+        temp_file.name  = file.filename
 
-        # [Inference] This MemoryStore is used to access the vector DB.
-        # We initialize it with a collection_name instead of a user_id
-        # to target the general knowledge base.
+        # We initialize it with a collection_name instead of a user_id to target the general knowledge base.
         doc_store = MemoryStore(collection_name=collection_name, url=QDRANT_URL)
         
         # Add the document to the vector store
@@ -129,8 +127,8 @@ async def upload_document(
         print(f"Error during file upload: {e}")
         print(f"Error details: {repr(e)}")
         raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred during file upload: {str(e)}"
+            status_code = 500,
+            detail      = f"An error occurred during file upload: {str(e)}"
         )
     
 

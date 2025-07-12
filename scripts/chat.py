@@ -35,7 +35,7 @@ def main():
             break
 
         # 1. Retrieve relevant memories
-        past_memories = memory.get_memories(query=question, k=3)
+        past_memories = memory.get_memories(query=question, k=5)
         past_memories_str = "\n".join([mem.page_content for mem in past_memories])
 
         # 2. Prepare the inputs for the crew
@@ -55,7 +55,7 @@ def main():
         summary = summarizer.invoke({"text": conversation_to_summarize})
 
         # 5. Call the add_memory method on the memory instance
-        memory.add_memory(summary)
+        memory.add_memory(summary.content)
 
 if __name__ == "__main__":
     main()

@@ -20,7 +20,6 @@ def get_embedder():
             num_ctx = 2048 # Explicitly set context size
         )
 
-
 """
 	1. We instantiate a QdrantClient once, then wrap it in LangChain’s QdrantVectorStore class for easy document add/query.
     2. We pull in the Qdrant URL from the provided argument.
@@ -29,20 +28,9 @@ def get_embedder():
 
 def get_vector_store(collection_name: str, url: str) -> QdrantVectorStore:
     if not url: raise ValueError("Qdrant URL must be provided.")
-    
+
     # 1. Initialize embedding function based on config
-    if LLM_CFG["default"] == "openai":
-        embeddings = OpenAIEmbeddings(
-            model = LLM_CFG["openai"]["embedding_model"],
-            openai_api_key = OPENAI_API_KEY
-        )
-        
-    else:
-        embeddings = OllamaEmbeddings(
-            model = LLM_CFG["ollama"]["embedding_model"],
-            base_url = OLLAMA_URL,
-            num_ctx = 2048
-        )
+    embeddings = get_embedder()
 
     # 2. Initialize Qdrant client
     client = QdrantClient(url = url)

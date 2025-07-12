@@ -42,8 +42,7 @@ class MemoryStore:
 
 # --- START: ADDED CODE to ensure user-specific collection exists ---
         try:
-            # Attempt to get the collection; if it doesn't exist, an exception will be raised
-            self.client.get_collection(collection_name=self.collection_name)
+            self.client.get_collection(collection_name = self.collection_name)
             print(f"Collection '{self.collection_name}' already exists for user '{self.user_id or self.collection_name}'.")
         except Exception as e: # Catch any exception, specifically 'NotFoundError' from Qdrant
             print(f"Collection '{self.collection_name}' not found for user '{self.user_id or self.collection_name}'. Creating new collection.")
@@ -54,8 +53,8 @@ class MemoryStore:
             
             # Create the new collection
             self.client.recreate_collection( # Using recreate_collection here for simplicity, create_collection is also an option if you don't want to inadvertently clear an existing one
-                collection_name=self.collection_name,
-                vectors_config=models.VectorParams(size=vector_size, distance=models.Distance.COSINE)
+                collection_name = self.collection_name,
+                vectors_config  = models.VectorParams(size=vector_size, distance=models.Distance.COSINE)
             )
             print(f"Successfully created collection '{self.collection_name}' for user '{self.user_id or self.collection_name}'.")
         # --- END: ADDED CODE ---
