@@ -132,3 +132,9 @@ async def upload_document(
             status_code=500,
             detail=f"An error occurred during file upload: {str(e)}"
         )
+    
+
+@app.get("/health", summary = "Health check endpoint")
+def health_check():
+    """Confirm the API is running and healthy"""
+    return {"status": "healthy"}
