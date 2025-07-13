@@ -98,7 +98,7 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
             detail      = "An error occurred while processing your request with the agent crew. Please check the server logs for details."
         )
     
-@app.post("/upload", summary="Upload a document to the knowledge base")
+@app.post("/upload", summary = "Upload a document to the knowledge base")
 async def upload_document(
     collection_name: str = Form("my_rag_collection"), 
     file: UploadFile     = File(...)
