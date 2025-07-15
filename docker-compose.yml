@@ -20,7 +20,30 @@ services:
       retries: 5
       start_period: 30s
 
-  # --- Service #2: The Ollama LLM Service ---
+  # --- Service #2: The Neo4j Graph Database Service ---
+  neo4j:
+    platform: linux/amd64
+    image: neo4j:5 # sticks with a version 5
+    ports:
+      - "7474:7474" # HTTP Browser Interface
+      - "7687:7687" # Bolt Protocol for driver connection
+    volumes:
+      - neo4j_data:/data
+    user: "7474:7474"
+    environment:
+      # ---Placeholder---This disables the need for a password on first launch for local dev. For production, must set a password here!
+      - NEO4J_AUTH=none
+    container_name: neo4j_db
+    networks:
+      - agent_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -O /dev/null http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # --- Service #3: The Ollama LLM Service ---
   ollama:
     build:
       context: .
@@ -41,7 +64,7 @@ services:
       retries: 5
       start_period: 300s # Allow extra time for model download
 
-  # --- Service #3: The Python Application (FastAPI) Service ---
+  # --- Service #4: The Python Application (FastAPI) Service ---
   api:
     platform: linux/amd64 # Specify platform for compatibility
     build:
@@ -54,6 +77,8 @@ services:
     depends_on:
       qdrant:
         condition: service_healthy # Ensure Qdrant is healthy before starting API
+      neo4j:
+        condition: service_healthy
       # ollama:
       #   condition: service_healthy # Ensure Ollama is healthy before starting API
     container_name: rag_api_service
@@ -62,6 +87,7 @@ services:
     environment:
       # Override URLs for inter-service communication within the Docker network
       - QDRANT_URL=http://qdrant:6333
+      - NEO4J_URI=bolt://neo4j:7687
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"] # Health check for FastAPI
       interval: 5s
@@ -79,4 +105,5 @@ networks:
 
 volumes:
   qdrant_storage: # Named volume for Qdrant persistence
-  ollama_storage: # Named volume for Ollama model persistence
+  ollama_storage:
+  neo4j_data:

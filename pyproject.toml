@@ -6,19 +6,26 @@ version = "0.1.0"
 description = "A modular, production-grade RAG + Agent framework."
 authors = ["Alex Vo ma@alex-vo.com"]
 readme = "README.md"
-packages = [{include = "rag_agent_framework", from = "src"}]
+packages = [
+    {include = "rag_agent_framework", from = "src"},
+    {include = "markitdown", from = "vendor"},
+]
 
 [tool.poetry.dependencies]
 python = ">=3.11, <=3.13"
 
 # Core LangChain & CrewAI
-langchain = "^0.2.5"
-langchain-openai = "^0.1.8"
-langchain-community = "^0.2.5"
-crewai = "0.141.0"
+# langchain = "^0.2.5"
+# langchain-openai = "^0.1.8"
+# langchain-community = "^0.2.5"
+# uncomment the lines above because line below will install the correct langchain dependencies automatically
+crewai = {extras = ["tools"], version = "0.35.0"}
 
 # Vector DB
 qdrant-client = "^1.7.0"
+
+# Graph DB Driver
+neo4j = "5.21.0"
 
 # LLM Support
 python-dotenv = "^1.0.1"
@@ -37,7 +44,7 @@ requests = "^2.32.0"
 
 # Tooling
 duckduckgo-search = "^6.1.8"
-langchain-qdrant = "^0.2.0"
+langchain-qdrant = "^0.1.1"
 python-box = "^7.3.2"
 
 [tool.poetry.group.dev.dependencies]

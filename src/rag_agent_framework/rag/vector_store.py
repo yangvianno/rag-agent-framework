@@ -8,6 +8,7 @@ from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL
 
 # Helper function to get the embedding model based on the config
 def get_embedder():
+    """Returns the embedding model client based on the specified provider or default from the config file"""
     if LLM_CFG["default"] == "openai":
         return OpenAIEmbeddings(
             model=LLM_CFG["openai"]["embedding_model"],
@@ -20,13 +21,13 @@ def get_embedder():
             num_ctx = 2048 # Explicitly set context size
         )
 
-"""
-	1. We instantiate a QdrantClient once, then wrap it in LangChain’s QdrantVectorStore class for easy document add/query.
-    2. We pull in the Qdrant URL from the provided argument.
-    3. We create an embeddings object (OpenAI or Ollama) based on LLM_CFG and available environment variables.	
-"""
 
 def get_vector_store(collection_name: str, url: str) -> QdrantVectorStore:
+    """
+        We instantiate a QdrantClient once, then wrap it in LangChain’s QdrantVectorStore class for easy document add/query.
+        1. We pull in the Qdrant URL from the provided argument.
+        2. We create an embeddings object (OpenAI or Ollama) based on LLM_CFG and available environment variables.	
+    """
     if not url: raise ValueError("Qdrant URL must be provided.")
 
     # 1. Initialize embedding function based on config

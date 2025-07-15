@@ -22,7 +22,7 @@ app = FastAPI(
     version = "1.0.0"
 )
 
-# --- Pydantic Models for API I/O ---
+# --- Pydantic Models for API I/O --- Defines the expected structure of incoming/outgoing JSON payloads for /chat
 class ChatRequest(BaseModel):
     question: str
     user_id: Optional[str] = Field(
@@ -30,7 +30,7 @@ class ChatRequest(BaseModel):
         description = "Unique identifier for the user"
     )
 
-class ChatResponse(BaseModel):
+class ChatResponse(BaseModel):   
     answer: str
     user_id: str
     memory_summary: Optional[str] = None
@@ -38,15 +38,17 @@ class ChatResponse(BaseModel):
 # --- API Endpoints ---
 @app.get("/", summary = "Root endpoint to check API status")
 def read_root():
-    """A simple endpoint to confirm the API is running"""
+    """/ -> Root: A simple endpoint to confirm the API is running"""
     return {"status": "ok", "message": "Welcome to the RAG Agent Framework API!"}
 
 @app.post("/chat", response_model=ChatResponse, summary="Handle a chat interaction")
 async def chat_with_agent(request: ChatRequest = Body(...)):
     """
-        Receives a user's question, orchestrate the agent crew to answer it,
-        manages conversation memory, and returns the final answer
-        This logic is adapted from scripts/chat.py
+        /chat -> Main chat endpoint
+        1. MemoryStore initialized for specific user_id (+ get_memories)
+        2. inputs{} combines user question and memory_context into dict passed to the agent crew
+        3. agent_crew.kickoff(inputs) inside run_in_threadpool since it's synchronous
+        4. get_summarizer(user's question + agent's response) in threadpool -> MemoryStore
     """
     
     print(f"Received chat request for user '{request.user_id}' with question: '{request.question}'")
@@ -63,7 +65,7 @@ async def chat_with_agent(request: ChatRequest = Body(...)):
         # 3. Prepare inputs for the crew, including the memory context
         inputs = {
             "topic": request.question,
-            "context": memory_context if memory_context else "No reevant past conversations found"
+            "context": memory_context if memory_context else "No relevant past conversations found"
         }
 
         # 4. Kick off the crew's task
@@ -104,8 +106,10 @@ async def upload_document(
     file: UploadFile     = File(...)
 ):
     """
-    Uploads a document to the specified Qdrant collection. This is used 
-    to populate the knowledge base for the document_researcher agent.
+        /upload -> Upload documents to KB
+        1. Reads the uploaded docs to io.BytesIO -> temp_file
+        2. Initializes MemoryStore for given collection_name (not tied to general) <- temp_file
+        Uploads a document to the specified Qdrant collection. This is used to populate the knowledge base for the document_researcher agent.
     """
     print(f"Received file '{file.filename}' for collection '{collection_name}'")
     try:
@@ -134,5 +138,5 @@ async def upload_document(
 
 @app.get("/health", summary = "Health check endpoint")
 def health_check():
-    """Confirm the API is running and healthy"""
+    """/health -> Confirm the API is running and healthy"""
     return {"status": "healthy"}

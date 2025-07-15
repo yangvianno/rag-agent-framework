@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import qdrant_client
-from qdrant_client.http import models as rest
+from qdrant_client.http import models
 from rag_agent_framework.rag.data_loader import load_documents
 from rag_agent_framework.rag.text_splitter import split_documents
 from rag_agent_framework.rag.vector_store import get_vector_store
@@ -30,9 +30,9 @@ def create_collection_if_not_exists(client: qdrant_client.QdrantClient, collecti
         print(f"Collection '{collection_name}' not found. Creating new collection...")
         client.recreate_collection(
             collection_name = collection_name,
-            vectors_config = rest.VectorParams(
+            vectors_config = models.VectorParams(
                 size    = vector_size,
-                distance= rest.Distance.COSINE,
+                distance= models.Distance.COSINE,
             ),
         )
         print(f"Collection '{collection_name}' created successfully.")
