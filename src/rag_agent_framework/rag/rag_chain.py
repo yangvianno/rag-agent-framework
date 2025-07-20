@@ -1,16 +1,15 @@
 # src/rag_agent_framework/rag/rag_chain.py
 
 import os 
-from qdrant_client import QdrantClient, models
-from langchain_openai import ChatOpenAI
+from qdrant_client                          import QdrantClient, models
+from langchain_openai                       import ChatOpenAI
 from langchain_community.chat_models.ollama import ChatOllama
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts                 import ChatPromptTemplate
+from langchain_core.runnables               import RunnablePassthrough
+from langchain_core.output_parsers          import StrOutputParser
 
-
-from rag_agent_framework.core.config import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, RETRIEVER_CFG
-from rag_agent_framework.rag.vector_store import get_vector_store, get_embedder
+from rag_agent_framework.core.config        import LLM_CFG, OPENAI_API_KEY, OLLAMA_URL, RETRIEVER_CFG
+from rag_agent_framework.rag.vector_store   import get_vector_store, get_embedder
 
 ### This template is the instruction for the LLM.
 RAG_PROMPT_TEMPLATE = """

@@ -24,7 +24,7 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock* ./
 
 # Install project dependencies
-RUN poetry install --no-root
+RUN poetry install --no-root --extras "linux"
 
 # --- STAGE 2: Runtime Environment (This is the corrected part) ---
 FROM python:3.11-slim-bookworm AS runtime

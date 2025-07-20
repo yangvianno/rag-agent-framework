@@ -1,4 +1,4 @@
-# src/rag_agent_framework/core/config.py
+# src/rag_agent_framework/core/config.py -- Single source of truth for configuration - Centralizing the logic cuz config comes from (YAML, .env, etc.)
 
 import os
 from pathlib import Path

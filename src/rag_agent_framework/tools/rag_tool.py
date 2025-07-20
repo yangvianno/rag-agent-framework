@@ -3,7 +3,8 @@
 
 from crewai.tools import tool
 from rag_agent_framework.rag.rag_chain import get_rag_chain
-from rag_agent_framework.core.config import QDRANT_URL
+from rag_agent_framework.core.config   import QDRANT_URL
+from rag_agent_framework.core.config   import config
 
 
 @tool("Document Knowledge Base Tool")
@@ -16,7 +17,7 @@ def rag_tool(question: str) -> str:
     if not qdrant_url: raise ValueError("QDRANT_URL environment variable not set.")
 
     # Get the RAG chain (builds retrieval, generation pipeline) - for rag_tool to execute that pipeline given the question
-    collection_name = "my_rag_collection"
+    collection_name = config.vector_db.default_collection_name
     rag_chain = get_rag_chain(collection_name = collection_name, url = qdrant_url)
 
     # Invoke the chain with the questions

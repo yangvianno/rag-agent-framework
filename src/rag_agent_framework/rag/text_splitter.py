@@ -1,4 +1,4 @@
-# src/rag_agent_framework/rag/text_splitter.py
+# src/rag_agent_framework/rag/text_splitter.py -- Reusable Component with single respoinsibility: splitting documents 
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
@@ -8,7 +8,7 @@ Breaks each Document into smaller chunks for embedding, using settings from the 
 """
 
 def split_documents(documents: list[Document], chunk_size : int = 1000, chunk_overlap: int = 200) -> list[Document]:
-    print(f"Splitting documents with chunk_size={chunk_size} and chunk_overlap={chunk_overlap}")
+    print(f"Splitting documents with chunk_size = {chunk_size} and chunk_overlap = {chunk_overlap}")
 
     
     splitter = RecursiveCharacterTextSplitter(chunk_size = chunk_size,

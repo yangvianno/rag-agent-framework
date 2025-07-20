@@ -7,15 +7,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
-from rag_agent_framework.utils import path_fix # noqa: F401
-# Import the LCEL chain function
-from rag_agent_framework.rag.rag_chain import get_rag_chain
+from src.rag_agent_framework.core.config import config
+from rag_agent_framework.utils           import path_fix          # noqa: F401
+from rag_agent_framework.rag.rag_chain   import get_rag_chain     # Import the LCEL chain function
 
 # A command-line interface to query the RAG chain.
 def main():
     parser = argparse.ArgumentParser(description="Query your RAG chain from the command line")
     parser.add_argument("query", type=str, help="The question you want to ask.")
-    parser.add_argument("-c", "--collection", default="my_rag_collection", help="The Qdrant collection to query.")
+    parser.add_argument("-c", "--collection", default=config.vector_db.default_collection_name, help="The Qdrant collection to query.")
     args = parser.parse_args()
 
     qdrant_url = os.getenv("QDRANT_URL")
