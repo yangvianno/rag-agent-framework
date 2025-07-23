@@ -1,4 +1,4 @@
-# src/rag_agent_framework/graph/schema.py
+# src/rag_agent_framework/graph/schema.py -- defines a basic schema with nodes for Part, Material, Standard, and Document
 
 import os
 from neo4j import GraphDatabase

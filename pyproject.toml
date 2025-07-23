@@ -14,18 +14,11 @@ packages = [
 [tool.poetry.dependencies]
 python = ">=3.11, <=3.13"
 
-# Core LangChain & CrewAI
-# langchain = "^0.2.5"
-# langchain-openai = "^0.1.8"
-# langchain-community = "^0.2.5"
-# uncomment the lines above because line below will install the correct langchain dependencies automatically
 crewai = {extras = ["tools"], version = "0.35.0"}
-
-# CAD Parsing Library
-python-occ-core = { version = "^7.7.2", optional = true }
 
 # Vector DB
 qdrant-client = "^1.7.0"
+langchain-qdrant = "^0.1.1"
 
 # Graph DB Driver
 neo4j = "^5.21.0"
@@ -38,6 +31,7 @@ ollama = "^0.2.1"
 # Data Ingestion
 pypdf = "^4.2.0"
 beautifulsoup4 = "^4.12.3"
+python-box = "^7.3.2"
 
 # Backend & Frontend
 fastapi = "^0.111.0"
@@ -47,8 +41,6 @@ requests = "^2.32.0"
 
 # Tooling
 duckduckgo-search = "^6.1.8"
-langchain-qdrant = "^0.1.1"
-python-box = "^7.3.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"

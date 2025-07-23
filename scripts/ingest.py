@@ -3,7 +3,12 @@
 import os
 import click
 import uuid
-from pathlib import Path       
+from pathlib import Path
+# -- Add project root to path to allow submodule imports --
+import sys
+project_root = Path(__file__).resolve().parent[1]
+sys.path.append(str(project_root))
+sys.path.append(str(project_root / 'vendor'))
 
 from src.rag_agent_framework.utils.db_connections      import DatabaseConnections
 from src.rag_agent_framework.ingestion.document_parser import parse_document
@@ -14,12 +19,6 @@ from langchain_community.embeddings                    import OllamaEmbeddings
 from langchain.schema                                  import Document
 from qdrant_client.http                                import models
 
-# -- Path fix for submodule imports --
-import sys
-project_root = Path(__file__).resolve().parent[1]
-sys.path.append(str(project_root))
-sys.path.append(str(project_root / 'vendor'))
-
 # -- Constants -- from config.yaml
 QDRANT_COLLECTION_NAME = config.vector_db.default_collection_name
 EMBEDDING_MODEL        = "nomic-embed-text:latest"
@@ -29,20 +28,85 @@ CAD_EXTENSIONS         = ['.step', 'iges']
 def get_embedder():
     return OllamaEmbeddings(model=EMBEDDING_MODEL)
 
-def process_and_store(file_path: str, qdrant, neo4j, embeddings):
+def process_and_store(file_path: str, db_manager: DatabaseConnections, embeddings):
     """Processes a single file, stores its content in Qdrant, and its metadata in Neo4j"""
     try:
-        # 1. Parse document using the appropriate parser
-        file_text = Path(file_path).suffix.lower()
-        if   file_text in MARKDOWN_EXTENSIONS:    content = parse_document(file_path)     # Using MarkitDown to parse documents
-        elif file_text in CAD_EXTENSIONS:
-            print(f"Skipping CAD file for now: {os.path.basename(file_path)}")
-            # Call cad_parser later
-            return
-        else: print(f"Unsupported file type: {os.path.basename(file_path)}. Skipping.")
+        qdrant_client = db_manager.get_qdrant_client()
+        neo4j_driver  = db_manager.get_neo4j_driver()
+        file_ext      = Path(file_path).suffic.lower()
+        filename      = os.path.basename(file_path)
 
-        # 2. Split the text in chunks
-        text
+        # -- Dispatcher Logic --
+        # 1. Hanfle CAD files
+        if file_ext in CAD_EXTENSIONS:
+            cad_data = parse_step_file(file_path)
+            with neo4j_driver.session() as session:
+                for part in cad_data['parts']:
+                    session.run("""
+                        MERGE (p:Part {part_id: $part_id})
+                        SET p.volume = $volume, p.source_file = $filename""",
+                        part_id = part["part_id"],
+                        volume  = part["volume"],
+                        filename= filename
+                    )
+                    print(f"✔️  Created Part node in Neo4j for: {part['part_id']}")
+
+                    # Store a text summary for the part in Qdrant
+                    qdrant_client.add(
+                        collection_name = QDRANT_COLLECTION_NAME,
+                        document        = [part['properties_text']],
+                        ids             = [str(uuid.uuid4())],
+                        metadatas       = [{"source": filename, "part_id": part['part_id'], "type": "cad_summary"}]
+                    )
+                    print(f"✔️  Stored vector summary in Qdrant for: {part['part_id']}")
+
+        # 2. Handle Text-based Documents
+        elif file_ext in MARKDOWN_EXTENSIONS:
+            content      = parse_document(file_path)
+            # Wraps raw text in a LangChain Document to use the text_splitter.py
+            temp_doc     = [Document(page_content=content, metadata={"source": filename})]  
+            chunked_docs = split_documents(
+                temp_doc,
+                chunk_size    = config.retriever.chunk_size,
+                chunk_overlap = config.retriever.chunk_overlap
+            )
+            chunk_texts  = [doc.page_content for doc in chunked_docs]
+
+            # Creates a single Document node in the graph
+            document_id = str(uuid.uuid4())
+            with neo4j_driver.session() as session:
+                session.run("""
+                    MERGE (d:Document {source_path: $source_path})
+                    SET d.document_id = $document_id, d.filename = $filename""",
+                    source_path = file_path,
+                    document_id = document_id,
+                    filename    = filename
+                )
+            print(f"✔️  Created Document node in Neo4j for: {filename}")
+
+            # Embed all chunks and store them in Qdrant
+            qdrant_client.add(
+                collection_name = QDRANT_COLLECTION_NAME,
+                documents       = chunk_texts,
+                ids             = [str(uuid.uuid4()) for _ in chunk_texts],
+                metadatas       = [{"source": filename, "document_id": document_id, "type": "text_chunk"} for _ in chunk_texts]
+            )
+            print(f"️✔️  Stored {len(chunk_texts)} text chunks in Qdrant for: {filename}")
+        
+        else:
+            print(f"⚠️ Unsupported file type: {filename}. Skipping.")
+            return
+    
+    except Exception as e:
+        print(f"❌ Failed to process {file_path}. Error: {e}")
+
+@click.command()
+@click.option('--path', default='./data', help='Path to the directory or a single file to ingest')
+def ingest(path):
+    """Ingest documents from a specified path into the hybrid knowledge base, populating both the Qdrant vector store and the Neo4j graph database"""
+    db_manager = DatabaseConnections
+
+            
 
 
 
@@ -100,7 +164,7 @@ def main():
     print(f"Ingest from {args.source} into collection '{args.collection}'...")
     
     # Ensure the collection exists
-    client = qdrant_client.QdrantClient(url = qdrant_url)
+    client         = qdrant_client.QdrantClient(url = qdrant_url)
     embedding_dims = config.llm.openai.embedding_dims
     create_collection_if_not_exists(client, args.collection, embedding_dims)
 

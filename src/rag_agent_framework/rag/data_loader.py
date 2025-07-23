@@ -5,7 +5,7 @@ from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain.schema import Document
 
 """
-    Load a PDF from disk or fetch & parse text from a URL.
+    Handling PDFs and web page - load a PDF from disk or fetch & parse text from a URL.
     Returns a list of LangChain Document objects.
 """
 

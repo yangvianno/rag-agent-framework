@@ -1,6 +1,6 @@
 # Dockerfile
 
-# --- STAGE 1: Build Environment (Keep this as is) ---
+# --- STAGE 1: Build Environment ---
 FROM python:3.11-slim-bookworm AS builder
 
 # Set environment variables
@@ -9,8 +9,9 @@ ENV POETRY_HOME="/opt/poetry"
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
 # Install build essentials and dependencies
+# We add 'mamba' for installing from conda-forge and the libs python-occ-core needs.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl && \
+    build-essential curl mamba libgl1-mesa-glx libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -24,9 +25,12 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock* ./
 
 # Install project dependencies
-RUN poetry install --no-root --extras "linux"
+RUN poetry install --no-root
 
-# --- STAGE 2: Runtime Environment (This is the corrected part) ---
+# CAD Parsing Library
+RUN . /app/.venv/bin/activate && mamba install -c conda-forge python-occ-core=7.7.2 --yes
+
+# --- STAGE 2: Runtime Environment ---
 FROM python:3.11-slim-bookworm AS runtime
 
 # Set environment variables
