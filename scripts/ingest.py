@@ -1,4 +1,7 @@
-# scripts/ingest.py - acts as dispatcher, handling routing and database population
+# scripts/ingest.py -- aparses, chunks, embeds, and stores (text and CAD files) into a hybrid knowledge base (Qdrant-vector search and Neo4j-graph based relationships)
+# 1. Handles CLI input using click(--path option)
+# 2. Initializes connections to Qdrant and Neo4j
+# 3. Processes each file (dir or single file) using process_and_store()
 
 import os
 import click
@@ -104,79 +107,45 @@ def process_and_store(file_path: str, db_manager: DatabaseConnections, embedding
 @click.option('--path', default='./data', help='Path to the directory or a single file to ingest')
 def ingest(path):
     """Ingest documents from a specified path into the hybrid knowledge base, populating both the Qdrant vector store and the Neo4j graph database"""
+    # Collection setup for Qdrant (pre-processing step), Neo4j connection is not needed at this stage
     db_manager = DatabaseConnections
+    qdrant     = db_manager.get_qdrant_client()
+    embeddings = get_embedder()
 
-            
-
-
-
-
-
-import os
-import argparse
-from pathlib import Path
-# Load environment variables first
-from dotenv import load_dotenv
-load_dotenv()
-
-import qdrant_client
-from qdrant_client.http import models
-from rag_agent_framework.rag.data_loader import load_documents
-from rag_agent_framework.rag.text_splitter import split_documents
-from rag_agent_framework.rag.vector_store import get_vector_store
-from rag_agent_framework.core.config import config
-
-"""
-	1.	Load your PDF or fetch & parse the URL
-	2.	Split it into chunks
-	3.	Upsert those chunks into your Qdrant collection
-"""
-
-# --- Helper Function ---
-def create_collection_if_not_exists(client: qdrant_client.QdrantClient, collection_name: str, vector_size: int):
-    """Creates a Qdrant collection if it doesn't already exist."""
+    # Ensure the Qdrant collection exists
     try:
-        client.get_collection(collection_name = collection_name)
-        print(f"Collection '{collection_name}' already exists.")
+        qdrant.get_collection(collection_name=QDRANT_COLLECTION_NAME)
+        print(f"🗂️  Using existing Qdrant collection: '{QDRANT_COLLECTION_NAME}'")
     except Exception:
-        print(f"Collection '{collection_name}' not found. Creating new collection...")
-        client.recreate_collection(
-            collection_name = collection_name,
-            vectors_config = models.VectorParams(
-                size    = vector_size,
-                distance= models.Distance.COSINE,
-            ),
+        print(f"✨ Creating new Qdrant collection: '{QDRANT_COLLECTION_NAME}'")
+        # Dynamically get embedding size from the model
+        vector_size = len(embeddings.embed_query("test"))
+        qdrant.recreate_collection(
+            collection_name = QDRANT_COLLECTION_NAME,
+            vectors_config  = models.VectorParams(size=vector_size, distance=models.Distance.COSINE)
         )
-        print(f"Collection '{collection_name}' created successfully.")
 
-def main():
-    parser = argparse.ArgumentParser(description = "Ingest a local PDF or a remote URL into your Qdrant vector store.")
-    parser.add_argument("-s", "--source", required = True,
-                        help = "Path to a PDF on disk or a URL to ingest")
-    parser.add_argument("-c", "--collection", default = config.vector_db.default_collection_name,
-                        help = "Name of the Qdrant collection (default to 'my_rag_collection')")
-    args = parser.parse_args()
-
-    qdrant_url = os.getenv("QDRANT_URL")
-    if not qdrant_url:
-        raise ValueError("QDRANT_URL environment variable not set.")
-
-    print(f"Ingest from {args.source} into collection '{args.collection}'...")
+    # Process files
+    if os.path.isdir(path):
+        print(f"📂 Processing directory: {path}")
+        for filename in os.listdir(path):
+            if not filename.startwith('.'): # Skips hidden files
+                file_path = os.path.join(path, filename)
+                if os.path.isfile(file_path): process_and_store(file_path, db_manager, embeddings)
     
-    # Ensure the collection exists
-    client         = qdrant_client.QdrantClient(url = qdrant_url)
-    embedding_dims = config.llm.openai.embedding_dims
-    create_collection_if_not_exists(client, args.collection, embedding_dims)
+    elif os.path.isfile(path):
+        print(f"📄 Processing single files: {path}")
+        process_and_store(path, db_manager, embeddings)
 
-    docs = load_documents(Path(args.source))    # 1. Load
+    else:
+        print(f"❌ Error: Provided path: '{path}' is not a valid file or directory.")
+        return
+    
+    db_manager.close_connections()
+    print(f"\n✅ Ingestion complete.")
 
-    print(f"Splitting documents with chunk_size={config.retriever.chunk_size} and chunk_overlap={config.retriever.chunk_overlap}")   # 2. Chunk
-    nodes = split_documents(docs, chunk_size=config.retriever.chunk_size, chunk_overlap=config.retriever.chunk_overlap)                
+if __name__ == '__main__':
+    ingest()
 
-    db = get_vector_store(collection_name = args.collection, url = qdrant_url)     # 3. Upsert into Qdrant
-    db.add_documents(nodes)
 
-    print(f"✅ Ingested {len(nodes)} chunks into '{args.collection}'.")
 
-if __name__ == "__main__":
-    main() 
