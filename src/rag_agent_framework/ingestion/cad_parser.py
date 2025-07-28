@@ -1,17 +1,15 @@
 # src/rag_agent_framework/ingestion/cad_parser.py
 
 import os
-from OCC.Core.STEPControl import STEPControl_Reader
-from OCC.Core.TopAbs      import TopAbs_SOLID
-from OCC.Core.GProp       import GProp_GProps
-from OCC.Core.BRepGProp   import brepgprop_VolumeProperties
+import steputils
+from pathlib import Path
 
 def parse_step_file(file_path: str) -> dict:
     """
-        Parses a .STEP file to extract part hierarchy and properties
+        Parses a .STEP file using steputils to extract the product/assembly hierarchy.
 
         Args:
-            file_path: the path to the .STEP file
+            file_path: The path to the .STEP file
 
         Returns:
             A dictionary containing structured data about the model
@@ -19,35 +17,39 @@ def parse_step_file(file_path: str) -> dict:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"STEP file not found at {file_path}")
     
-    print(f"Parsing STEP file: {os.path.basename(file_path)}...")
+    print(f"Parsing STEP file with steutils: {os.path.basename(file_path)}...")
 
-    reader = STEPControl_Reader()
-    status = reader.ReadFile(file_path)
-    if not status:
-        raise ValueError(f"Failed to read STEP file: {file_path}")
-    reader.TransferRoots()
-    shape = reader.OneShape()
+    # Load the STEP file
+    cad_file = steputils.load(file_path)
 
-    # -- Data Extraction Lofic --
     parts = []
-    # In a real scenario would traverse the assembly tree. For now we'll treat each solid as a part
-    # A more complex explorer would be a needed for assemblies
+    # A STEP file can have multiple assemblies, so we iterate
+    for assembly in cad_file.assemblies:
+        # This is a simple representation,a real parser would traverse the tree
+        part_name = assembly.name if assembly.name else f"Unnamed_Part_in_{Path(file_path).name}"
+    
+        # NOTE: steputils doesn't do geometric calculations like volume, here, only extracting the structural info
+        part_data = {
+            "part_id": part_name,
+            "volume": 0.0, # Placeholder
+            "properties_text": f"Part: {part_name} from source file {Path(file_path).name}"
+        }
+        parts.append(part_data)
+    
 
-    # This is a placeholder for a more shape explorer
-    # For,now, we assume a single part file for simplicity
-    props = GProp_GProps()
-    brepgprop_VolumeProperties(shape, props)
+    if not parts:
+        # Handles cases where there might not be a defined assembly
+        parts.append({
+            "part_id": Path(file_path).stem,
+            "volume": 0.0,
+            "properties_text": f"Part: {Path(file_path).stem} from source file {Path(file_path).name}"
+        })
 
-    part_data = {
-        "part_id": os.path.basename(file_path),
-        "volume": props.Mass(),  # In OpenCASCADE, Mass() gives volume if density is 1
-        "properties_text": f"Part: {os.path.basename(file_path)}, Volume: {props.Mass():.2f} mm^3"
-    }
-    parts.append(part_data)
-
-    print(f"Successfully extracted data for {len(parts)} part(s).")
+    print(f"Successfully extracted data for {len(parts)} part(s)")
 
     return {
         "filename": os.path.basename(file_path),
         "parts": parts
     }
+
+    

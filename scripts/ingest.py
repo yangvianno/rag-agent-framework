@@ -9,9 +9,9 @@ import uuid
 from pathlib import Path
 # -- Add project root to path to allow submodule imports --
 import sys
-project_root = Path(__file__).resolve().parent[1]
+project_root = Path(__file__).resolve().parent.parent
 sys.path.append(str(project_root))
-sys.path.append(str(project_root / 'vendor'))
+sys.path.append(str(project_root / 'vendor/markitdown/packages/markitdown/src'))
 
 from src.rag_agent_framework.utils.db_connections      import DatabaseConnections
 from src.rag_agent_framework.ingestion.document_parser import parse_document
@@ -36,7 +36,7 @@ def process_and_store(file_path: str, db_manager: DatabaseConnections, embedding
     try:
         qdrant_client = db_manager.get_qdrant_client()
         neo4j_driver  = db_manager.get_neo4j_driver()
-        file_ext      = Path(file_path).suffic.lower()
+        file_ext      = Path(file_path).suffix.lower()
         filename      = os.path.basename(file_path)
 
         # -- Dispatcher Logic --
@@ -57,7 +57,8 @@ def process_and_store(file_path: str, db_manager: DatabaseConnections, embedding
                     # Store a text summary for the part in Qdrant
                     qdrant_client.add(
                         collection_name = QDRANT_COLLECTION_NAME,
-                        document        = [part['properties_text']],
+                        documents       = [part['properties_text']],
+                        embeddings      = [embeddings.embed_query(part['properties_text'])],
                         ids             = [str(uuid.uuid4())],
                         metadatas       = [{"source": filename, "part_id": part['part_id'], "type": "cad_summary"}]
                     )
@@ -91,6 +92,7 @@ def process_and_store(file_path: str, db_manager: DatabaseConnections, embedding
             qdrant_client.add(
                 collection_name = QDRANT_COLLECTION_NAME,
                 documents       = chunk_texts,
+                embeddings      = embeddings.embed_documents(chunk_texts),
                 ids             = [str(uuid.uuid4()) for _ in chunk_texts],
                 metadatas       = [{"source": filename, "document_id": document_id, "type": "text_chunk"} for _ in chunk_texts]
             )
@@ -108,7 +110,7 @@ def process_and_store(file_path: str, db_manager: DatabaseConnections, embedding
 def ingest(path):
     """Ingest documents from a specified path into the hybrid knowledge base, populating both the Qdrant vector store and the Neo4j graph database"""
     # Collection setup for Qdrant (pre-processing step), Neo4j connection is not needed at this stage
-    db_manager = DatabaseConnections
+    db_manager = DatabaseConnections()
     qdrant     = db_manager.get_qdrant_client()
     embeddings = get_embedder()
 
@@ -129,7 +131,7 @@ def ingest(path):
     if os.path.isdir(path):
         print(f"📂 Processing directory: {path}")
         for filename in os.listdir(path):
-            if not filename.startwith('.'): # Skips hidden files
+            if not filename.startswith('.'): # Skips hidden files
                 file_path = os.path.join(path, filename)
                 if os.path.isfile(file_path): process_and_store(file_path, db_manager, embeddings)
     

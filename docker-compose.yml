@@ -1,5 +1,7 @@
 # docker-compose.yml
 
+version: "3.8"
+
 services:
   # --- Service #1: The Qdrant Vector Database Service ---
   qdrant:
@@ -29,7 +31,6 @@ services:
       - "7687:7687" # Bolt Protocol for driver connection
     volumes:
       - neo4j_data:/data
-    user: "7474:7474"
     environment:
       # ---Placeholder---This disables the need for a password on first launch for local dev. For production, must set a password here!
       - NEO4J_AUTH=none
@@ -64,40 +65,79 @@ services:
       retries: 5
       start_period: 300s # Allow extra time for model download
 
+  # --- CAD Parsing Microservice ---
+  cad-parser:
+    platform: linux/amd64
+    build:
+      context: ./services/cad-parser
+    container_name: cad-parser
+    ports:
+      - "8001:8000"
+    networks:
+      - agent_network
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/parse_cad/ -F file=@/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # --- PDF Semantic Parsing Microservice ---
+  pdf-parser:
+    platform: linux/amd64
+    build:
+      context: ./services/pdf-parser
+    container_name: pdf-parser
+    ports:
+      - "8002:8000"
+    networks:
+      - agent_network
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/parse_pdf/ -F file=@/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   # --- Service #4: The Python Application (FastAPI) Service ---
   api:
-    platform: linux/amd64 # Specify platform for compatibility
+    platform: linux/amd64
     build:
-      context: . # Build using the Dockerfile in the current directory (project root)
+      context: .
       dockerfile: Dockerfile
+    container_name: rag_api_service
     ports:
-      - "8000:8000" # FastAPI application port
+      - "8000:8000"
     env_file:
-      - .env # Load environment variables from the local .env file
+      - .env
     depends_on:
       qdrant:
-        condition: service_healthy # Ensure Qdrant is healthy before starting API
+        condition: service_healthy
       neo4j:
         condition: service_healthy
       # ollama:
-      #   condition: service_healthy # Ensure Ollama is healthy before starting API
-    container_name: rag_api_service
+      #   condition: service_healthy
     networks:
       - agent_network
-    environment:
-      # Override URLs for inter-service communication within the Docker network
-      - QDRANT_URL=http://qdrant:6333
-      - NEO4J_URI=bolt://neo4j:7687
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"] # Health check for FastAPI
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
     volumes:
       - ./src:/app/src
       - ./scripts:/app/scripts
       - ./config:/app/config
+      - ./ui:/app/ui
+      - ./vendor:/app/vendor
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - NEO4J_URI=bolt://neo4j:7687
+      - CAD_PARSER_URL=http://cad-parser:8000
+      - PDF_PARSER_URL=http://pdf-parser:8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
 # --- Top-Level Definitions ---
 networks:
