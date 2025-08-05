@@ -1,8 +1,8 @@
 # src/rag_agent_framework/agents/crew.py -- Crew Assembly -- The entire agentic system defintions
 
-from crewai import Crew, Process
+from crewai           import Crew, Process
 from .research_agents import document_researcher, general_researcher, report_writer, llm
-from .tasks import document_research_task, web_research_task, writer_task
+from .tasks           import document_research_task, web_research_task, writer_task
 
 # Assemble the new sequential crew
 agent_crew = Crew(

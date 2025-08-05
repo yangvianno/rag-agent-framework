@@ -10,10 +10,10 @@ from langchain_community.chat_models.ollama import ChatOllama
 from langchain.prompts                      import ChatPromptTemplate
 from qdrant_client                          import QdrantClient, models
 # --- Project-Specific Imports: The RAG Tools ---
-from rag_agent_framework.rag.data_loader import load_documents
+from rag_agent_framework.rag.data_loader   import load_documents
 from rag_agent_framework.rag.text_splitter import split_documents
-from rag_agent_framework.rag.vector_store import get_vector_store, get_embedder
-from rag_agent_framework.core.config import *
+from rag_agent_framework.rag.vector_store  import get_vector_store, get_embedder
+from rag_agent_framework.core.config       import *
 
 
 
@@ -101,7 +101,11 @@ class MemoryStore:
 
         # 3. Call the Chopping Station (text_splitter.py).
         print(f"🔪 -> Calling text_splitter to chunk {len(documents)} document(s).")
-        chunked_documents = split_documents(documents)
+        chunked_documents = split_documents(  
+            documents,  
+            chunk_size    = config.retriever.chunk_size,  
+            chunk_overlap = config.retriever.chunk_overlap  
+        )
         
         # 4. Call the Line Cook (vector_store) to save the final product.
         print(f"✅ -> Storing {len(chunked_documents)} chunks in the vector store.")

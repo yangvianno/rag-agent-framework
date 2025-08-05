@@ -18,7 +18,7 @@ from src.rag_agent_framework.ingestion.document_parser import parse_document
 from src.rag_agent_framework.ingestion.cad_parser      import parse_step_file
 from src.rag_agent_framework.rag.text_splitter         import split_documents
 from src.rag_agent_framework.core.config               import config
-from langchain_community.embeddings                    import OllamaEmbeddings
+from src.rag_agent_framework.rag.vector_store          import get_embedder
 from langchain.schema                                  import Document
 from qdrant_client.http                                import models
 
@@ -27,9 +27,6 @@ QDRANT_COLLECTION_NAME = config.vector_db.default_collection_name
 EMBEDDING_MODEL        = "nomic-embed-text:latest"
 MARKDOWN_EXTENSIONS    = ['.pdf', '.docx', '.md', '.html', '.pptx', '.txt']
 CAD_EXTENSIONS         = ['.step', 'iges']
-
-def get_embedder():
-    return OllamaEmbeddings(model=EMBEDDING_MODEL)
 
 def process_and_store(file_path: str, db_manager: DatabaseConnections, embeddings):
     """Processes a single file, stores its content in Qdrant, and its metadata in Neo4j"""

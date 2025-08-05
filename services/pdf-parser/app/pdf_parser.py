@@ -1,8 +1,18 @@
 # services/pdf-parser/app/pdf_parser.py
 
-from markitdown import Document
+from markitdown import MarkItDown
 
-def parse_pdf_to_markdown(path: str) -> str:
-    doc = Document(path)
-    # you can choose render_markdown() or render_html()
-    return doc.render_markdown()
+class ParseError(Exception):
+    """Raised when PDF parsing fails"""
+    pass
+
+def convert_to_markdown(path: str) -> str:
+    """Loads a file via Markitdown and returns its Markdown representation"""
+    try:
+        md = MarkItDown()
+        result = md.convert(path)
+
+        return result.text_content
+    except Exception as e:
+        raise ParseError(f"Error parsing PDF {path}: {e}") from e
+
