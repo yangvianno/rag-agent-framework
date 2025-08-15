@@ -1,184 +1,279 @@
-# rag-agent-framework
 # Technical Implementation Guide:
-## Inventory Management MVP with a Separate Environments Architecture
+## Migrating Access Inventory to the Power Platform
 
 ---
 
-### **Introduction: A New Approach for Absolute Data Isolation**
-
-This document provides a comprehensive, phase-by-phase technical blueprint for developing an inventory management Minimum Viable Product (MVP) on the Microsoft Power Platform.
-
-In response to the stakeholder requirement for **complete and physical data separation**, this guide adopts a **Separate Environments Architecture**. Instead of a single, shared database with logical security rules, this model provisions a unique, self-contained Power Platform Environment for each external partner. This approach guarantees that no partner's data will ever reside in the same database as another's, providing the highest possible level of data isolation.
-
-#### **Core Project Goals:**
-1.  **Centralized Internal Management**: Provide a single Power App for internal staff to manage inventory across all partner environments.
-2.  **Isolated Partner Portals**: Offer each external partner a secure, dedicated Power Pages portal connected exclusively to their own private database.
-3.  **Scalable Onboarding**: Establish a repeatable process for onboarding new partners into their own environments.
-
-#### **Critical Trade-Offs of This Architecture:**
-This approach successfully meets the demand for data separation but introduces significant trade-offs that must be acknowledged:
-* **Higher Cost**: Each new environment requires its own Dataverse database capacity, which has direct and recurring licensing costs.
-* **Increased Management Overhead**: Deploying updates or new features requires exporting the master solution and manually importing it into every single partner environment.
-* **Greater Technical Complexity**: The internal Power App must be engineered to dynamically switch between different partner environment databases, which is more complex than connecting to a single source.
+**Document Version:** 1.1  
+**Date:** August 14, 2025  
+**Author:** Gemini Architect  
+**Status:** Final
 
 ---
 
-### **Phase 1: Build the Master Solution in the Development Environment**
+### **1.0 Introduction**
 
-**Goal**: Create a single, reusable, and deployable solution in your primary development environment that contains all the core components. This "master template" will be deployed to each partner environment.
+#### **1.1 Purpose**
+This document provides a comprehensive, phase-by-phase technical blueprint for migrating the legacy Microsoft Access inventory database to a modern, secure, and scalable solution using Microsoft Dataverse, Power Apps, and Power Automate. It contains the complete data model, specific Power Fx formulas, and detailed automation logic required for a successful implementation. This guide is intended for Power Platform developers and administrators and is designed to be a repeatable blueprint for future deployments.
 
-**Technical Instructions:**
+#### **1.2 Core Architecture: The Separate Environments Model**
+The foundational architectural choice for this project is the **Separate Environments Model**. To meet the strict requirement for complete data privacy and security, each external partner will be provisioned with their own dedicated Power Platform environment, which includes a private Dataverse database. This model provides the highest level of data security through physical isolation.
 
-1.  **Select Your Development Environment**
-    * Navigate to the Power Apps maker portal (`make.powerapps.com`).
-    * From the environment selector in the top-right, choose your dedicated development environment (e.g., "Alex Vo's Environment"). **Do not build in the default environment.**
+**Key Trade-Offs:**
+* **Cost:** Each environment requires its own Dataverse database capacity, incurring direct licensing costs.
+* **Management:** Deploying updates requires exporting the master solution and importing it into each partner environment individually.
 
-2.  **Create the Solution Publisher**
-    * In the left navigation, select **Solutions**.
-    * On the command bar, select **New solution**.
-    * In the **Publisher** dropdown, select **+ Publisher**.
-    * **Display Name**: `M4D LLC`
-    * **Prefix**: `inv` (This is critical for uniquely identifying your components).
-    * Select **Save**.
-
-3.  **Create the Master Unmanaged Solution**
-    * Back in the "New Solution" pane:
-    * **Display Name**: `M4D Inventory Management - MASTER`
-    * **Publisher**: Select the "M4D LLC (inv)" publisher you just created.
-    * Select **Create**. From now on, **always work inside this solution**.
-
-4.  **Create the `Product` Table**
-    * Inside the solution, select **New > Table**.
-    * **Display Name**: `Product`
-    * Expand **Advanced options** and change the **Primary name column's Display Name** to `Product Description`.
-    * Select **Save**.
-    * Add all necessary columns based on your Excel file (`GTIN`, `SKU`, `Brand Name`, etc.).
-    * For columns like `Status Label` and `Product Industry`, use the **Choice** data type to create standardized options.
-    * **Important**: Do NOT add a lookup column to the `Account` table in this master solution. Since each partner has their own database, this relationship is not needed at the master level.
-
-5.  **Build the Internal Power App**
-    * Inside the solution, select **New > App > Canvas app**.
-    * Build the internal staff application. It should include:
-        * A gallery to view products.
-        * Forms to edit and create products.
-        * Barcode scanning functionality.
-    * **Note**: For now, connect this app to the `Product` table in your development environment for testing. In a later phase, you will modify it to connect to multiple partner environments.
-
-6.  **Create the Power Pages Site Template**
-    * Inside the solution, select **New > App > Power Pages site**.
-    * Design a generic portal template that can be deployed for each partner. Include:
-        * A "My Products" page with a **List** component connected to the `Product` table.
-        * A "Manage Product" page with a **Form** component for creating/editing records.
-    * Do not provision the site fully yet; you are creating the template components that will be included in the solution.
+#### **1.3 Best Practices for This Guide**
+It is highly recommended to capture and insert screenshots during the initial build for key configuration steps (e.g., Power Automate trigger setup, Portal Table Permissions) to supplement this guide for future reference.
 
 ---
 
-### **Phase 2: Prepare and Export the Master Solution**
+### **2.0 Phase 1: Foundational Setup & Data Model Architecture**
 
-**Goal**: Package the master solution into a deployable file that can be imported into each new partner environment.
+#### **2.1 Initial Solution Setup**
+All development work must occur within a dedicated solution to enable proper Application Lifecycle Management (ALM).
 
-**Technical Instructions:**
+1.  **Create a Solution Publisher:**
+    * Navigate to `make.powerapps.com` > **Solutions**.
+    * Create a new **Publisher** with the following details:
+        * **Display Name:** M4D LLC
+        * **Prefix:** `inv`
 
-1.  **Finalize and Test Components**
-    * Thoroughly test the Power App and all components within your development environment to ensure they function as expected.
+2.  **Create the Master Unmanaged Solution:**
+    * Create a new **Solution** with the following details:
+        * **Display Name:** Inventory Management System - MASTER
+        * **Publisher:** Select the publisher created above.
 
-2.  **Export the Solution (Two Ways)**
-    * Select your `M4D Inventory Management - MASTER` solution and click **Export solution** from the command bar.
-    * **First Export (Unmanaged)**:
-        * A side panel will appear. Click **Publish** to publish all changes first.
-        * Click **Next**.
-        * Select **Unmanaged** as the package type.
-        * Click **Export**. This file is your editable backup and the master file for future development.
-    * **Second Export (Managed)**:
-        * Click **Export solution** again.
-        * Select **Managed** as the package type.
-        * Click **Export**. This locked-down file is what you will deploy to your partners. It prevents them from making direct modifications, ensuring consistency.
+#### **2.2 Final Dataverse Data Model**
+The following tables must be created inside the "Inventory Management System - MASTER" solution.
+
+##### **2.2.1 Table: ProductList**
+* **Purpose:** The master catalog of all products.
+* **Primary Name Column:** `DESCRIPTION` (Data type: Text)
+* **Columns:**
+    * `ProductID` (Data type: Text, Alternate Key)
+    * `Barcode` (Data type: Text) - This will be the scannable GTIN.
+    * `Productclassification` (Data type: Text)
+    * `PRODUCTGROUP` (Data type: Text)
+    * `expiringdateyesorno` (Data type: Choice, Options: "Yes", "No")
+
+##### **2.2.2 Table: CompanyInfo**
+* **Purpose:** Stores partner and client company details.
+* **Primary Name Column:** `Business` (Data type: Text)
+* **Columns:**
+    * `Address`, `AddressLine2`, `City`, `State`, `ZipCode`, `Country` (All Text)
+    * `PhoneNumber` (Data type: Phone)
+
+##### **2.2.3 Table: EnteredValues**
+* **Purpose:** The core transaction log for all inventory movements.
+* **Primary Name Column:** `TransactionID` (Data type: Autonumber)
+* **Columns:**
+    * `Barcode` (Data type: **Lookup**, Related Table: `ProductList`)
+    * `ProductID` (Data type: Text)
+    * `LotNumber` (Data type: Text)
+    * `DateScannedIn` (Data type: Date and Time)
+    * `ShipmentNumber` (Data type: Text)
+    * `ShipmentLocation` (Data type: Text)
+    * `Quantity` (Data type: **Whole Number**) - Use positive for additions, negative for subtractions.
+
+##### **2.2.4 Table: Backorder**
+* **Purpose:** Manages primary order information.
+* **Primary Name Column:** `OrderID` (Data type: Autonumber)
+* **Columns:**
+    * `Company` (Data type: **Lookup**, Related Table: `CompanyInfo`)
+    * `PurchaseOrder` (Data type: Text)
+    * `DateScannedIn2` (Data type: Date Only)
+    * `Status` (Data type: Choice, Options: "Pending", "Backordered", "Shipped")
+
+##### **2.2.5 Table: BackorderDetails**
+* **Purpose:** Stores the individual line items for each backorder.
+* **Primary Name Column:** `BackorderDetailID` (Data type: Autonumber)
+* **Columns:**
+    * `Backorder` (Data type: **Lookup**, Related Table: `Backorder`)
+    * `Product` (Data type: **Lookup**, Related Table: `ProductList`)
+    * `Quantity3` (Data type: **Whole Number**)
+
+##### **2.2.6 Table: FedExIntegration**
+* **Purpose:** Stores a complete, point-in-time snapshot of shipment details.
+* **Primary Name Column:** `ShipmentNumber` (Data type: Text)
+* **Columns:**
+    * `Backorder` (Data type: **Lookup**, Related Table: `Backorder`)
+    * `TrackingNumber` (Data type: Text)
+    * `ShipmentLocation`, `Address`, `Address2`, `City`, `State`, `ZipCode`, `Country` (All Text)
+    * `PhoneNumber` (Data type: Phone)
+    * `Memo` (Data type: Text Area)
+    * `Weight` (Data type: Decimal Number)
+
+#### **2.3 Data Model Relationships**
+The following relationships are critical for the system to function correctly. They will be created automatically when you create the Lookup columns defined above.
+
+* `EnteredValues` to `ProductList` (Many-to-One)
+* `Backorder` to `CompanyInfo` (Many-to-One)
+* `BackorderDetails` to `Backorder` (Many-to-One)
+* `BackorderDetails` to `ProductList` (Many-to-One)
+* `FedExIntegration` to `Backorder` (Many-to-One)
 
 ---
 
-### **Phase 3: The Partner Onboarding Process (Repeatable Checklist)**
+### **3.0 Phase 2: Internal Warehouse Power App Implementation**
 
-**Goal**: Follow this repeatable process every time you onboard a new external partner.
+#### **3.1 Screen: MainMenu (Inventory Dashboard)**
+This screen replicates the `MainMenu` form, providing a filterable, real-time view of inventory levels.
 
-#### **Step 3.1: Create a New Partner Environment**
-1.  Navigate to the [Power Platform Admin Center](https://admin.powerplatform.microsoft.com/).
-2.  In the left navigation, select **Environments**, then click **+ New**.
-3.  **Name**: Use a clear, consistent naming convention (e.g., `Partner A - Inventory`).
-4.  **Region**: Choose the appropriate region.
-5.  **Type**: Select **Production**.
-6.  **Create a database for this environment?**: Toggle this to **Yes**. This is the most critical step.
-7.  Click **Save**. Wait for the environment to finish provisioning.
+##### **3.1.1 Displaying Current Inventory**
+* **Goal:** Replicate the `EnteredValuesQuery2` which uses `SUM(Quantity)` and `GROUP BY`.
+* **Controls:** Add a Gallery control (`gal_InventorySummary`).
+* **`Items` Property Formula for `gal_InventorySummary`:**
+    ```powerapps
+    // Group all transactions by the related Product and LotNumber,
+    // then create a new column "TotalQuantity" that sums the Quantity for each group.
+    AddColumns(
+        GroupBy(
+            EnteredValues,
+            "Barcode", // This is the lookup column to the ProductList table
+            "LotNumber",
+            "GroupedTransactions" // A temporary name for the grouped data
+        ),
+        "TotalQuantity",
+        Sum(GroupedTransactions, Quantity)
+    )
+    ```
+* **Gallery Labels:** Inside the gallery, display the data using labels with these `Text` properties: `ThisItem.Barcode.DESCRIPTION`, `ThisItem.LotNumber`, `ThisItem.TotalQuantity`.
 
-#### **Step 3.2: Import the Managed Solution**
-1.  Navigate to the newly created partner environment using the environment selector in the Power Apps portal.
-2.  Go to **Solutions**.
-3.  Click **Import solution** from the command bar.
-4.  Select the **Managed** solution `.zip` file you exported in Phase 2.
-5.  Follow the on-screen prompts to import the solution. This will create the `Product` table and all your app/portal components inside the partner's dedicated environment.
+##### **3.1.2 Filtering the Inventory View**
+* **Goal:** Replicate the live filtering from the Access form.
+* **Controls:**
+    * Add a **ComboBox** control named `ProductFilterCombo`. Set its `Items` property to `ProductList`.
+    * Add a **Text input** control named `LotFilterInput`.
+* **Updated `Items` Property Formula for `gal_InventorySummary`:**
+    ```powerapps
+    Filter(
+        // This is the same GroupBy/AddColumns formula from the previous step
+        AddColumns(
+            GroupBy(EnteredValues, "Barcode", "LotNumber", "GroupedTransactions"),
+            "TotalQuantity",
+            Sum(GroupedTransactions, Quantity)
+        ),
+        // Filter Logic Start
+        (IsBlank(ProductFilterCombo.Selected) || Barcode.Barcode = ProductFilterCombo.Selected.Barcode)
+        &&
+        (IsBlank(LotFilterInput.Text) || LotNumber = LotFilterInput.Text)
+        // Filter Logic End
+    )
+    ```
 
-#### **Step 3.3: Provision the Power Pages Portal**
-1.  In the partner environment, navigate to **Apps**.
-2.  You will see the Power Pages site template you created. Select it.
-3.  Follow the prompts to provision the site. Give it a unique name and URL (e.g., `partner-a-inventory.powerappsportals.com`).
+#### **3.2 Screen: Data Entry (Add/Subtract Inventory)**
+This screen replaces temporary tables (`UnitT`) with an in-app collection to stage data.
 
-#### **Step 3.4: Import Partner-Specific Data**
-1.  Prepare an Excel file containing **only the data for that specific partner**.
-2.  In the partner environment, navigate to your `Product` table (inside the imported solution).
-3.  Select **Import > Import data from Excel** and upload the partner-specific file.
+##### **3.2.1 Collecting Scanned Items into a Collection**
+* **Goal:** Stage multiple scanned items in a temporary collection named `newInventoryItems`.
+* **Control:** An "Add Item" Button.
+* **`OnSelect` Property Formula:**
+    ```powerapps
+    With({_product: LookUp(ProductList, Barcode = txtBarcode.Text)},
+        Collect(newInventoryItems, {
+            ScannedBarcode: txtBarcode.Text,
+            ProductID: _product.ProductID,
+            LotNumber: txtLotNumber.Text,
+            Quantity: Value(txtQuantity.Text),
+            ShipmentNumber: "" // Placeholder for later update
+        })
+    );
+    Reset(txtBarcode); Reset(txtLotNumber); Reset(txtQuantity);
+    ```
 
-#### **Step 3.5: Configure Security and User Access**
-1.  Add the partner's employees as guest users in your company's Microsoft Entra ID (Azure AD).
-2.  Assign them the necessary Power Apps licenses.
-3.  In the **Portal Management** app for the partner's new portal, navigate to **Security > Contacts** and add the partner users.
-4.  Assign them the **Authenticated Users** web role. The security is simpler now because all data within this environment belongs to them, so complex rules are not needed.
+##### **3.2.2 Updating All Items in the Collection**
+* **Goal:** Apply a single `ShipmentNumber` to all staged items, replacing `UpdateUnitTQuery`.
+* **Controls:** A Text input (`txtShipmentNumberForAll`) and a Button ("Apply to All").
+* **"Apply to All" Button `OnSelect` Property Formula:**
+    ```powerapps
+    UpdateIf(newInventoryItems, true, { ShipmentNumber: txtShipmentNumberForAll.Text });
+    Notify("Shipment Number applied to all items.", NotificationType.Information);
+    ```
+
+##### **3.2.3 Saving the Collection to Dataverse**
+* **Goal:** Save all staged items to the `EnteredValues` table, replacing the `INSERT INTO` query.
+* **Control:** A "Save" Button.
+* **`OnSelect` Property Formula:**
+    ```powerapps
+    ForAll(newInventoryItems,
+        Patch(EnteredValues, Defaults(EnteredValues), {
+            Barcode: LookUp(ProductList, Barcode = ThisRecord.ScannedBarcode),
+            ProductID: ThisRecord.ProductID,
+            LotNumber: ThisRecord.LotNumber,
+            Quantity: ThisRecord.Quantity, // For subtraction screen, use ThisRecord.Quantity * -1
+            ShipmentNumber: ThisRecord.ShipmentNumber,
+            DateScannedIn: Now()
+        })
+    );
+    Clear(newInventoryItems);
+    Notify("All items have been saved to the database.", NotificationType.Success);
+    ```
 
 ---
 
-### **Phase 4: Configure the Internal Multi-Environment Power App**
+### **4.0 Phase 3: Order Management & Partner Portal Logic**
 
-**Goal**: Modify your internal Power App to allow staff to select and manage inventory across any of the separate partner environments.
-
-**Technical Instructions:**
-
-1.  **Create a Partner Directory**
-    * In your main development environment, create a new table named `Partner Directory`.
-    * Add two columns: `Partner Name` (Text) and `Environment ID` (Text).
-    * For each partner environment you create, find its unique Environment ID and add a new row to this table.
-        * *Tip*: You can find the Environment ID in the Power Platform Admin Center by selecting the environment and looking at the details, or in the URL.
-
-2.  **Modify the Internal Power App**
-    * Open your internal Power App in the development environment.
-    * On the home screen, add a **Dropdown** control.
-    * Set the **Items** property of the dropdown to connect to your `Partner Directory` table:
-        ```powerapps
-        'Partner Directory'
-        ```
-    * Now, you must modify every Dataverse call in your app to use the selected partner's environment. For example, to view the products in a gallery, the `Items` property would change from `'Products'` to:
-        ```powerapps
-        Filter(
-            [@Products],
-            'Environment ID' = Dropdown1.Selected.'Environment ID'
+#### **4.1 Creating Orders with Related Line Items**
+* **Goal:** Create a main `Backorder` record, then use its ID to create multiple related `BackorderDetails` records.
+* **Assumption:** An in-app collection `newOrderLines` holds the products for the new order.
+* **"Save Order" Button `OnSelect` Property Formula:**
+    ```powerapps
+    // Step 1: Create the main Backorder record and store it in a variable.
+    With({ newOrderRecord:
+        Patch(Backorder, Defaults(Backorder), {
+            PurchaseOrder: txtPONumber.Text,
+            Company: partnerDropdown.Selected,
+            DateScannedIn2: Today(),
+            Status: 'Status (Backorder)'.Pending
+        })
+    },
+        // Step 2: Loop through the newOrderLines collection and create related records.
+        ForAll(newOrderLines,
+            Patch(BackorderDetails, Defaults(BackorderDetails), {
+                Product: ThisRecord.ProductLookup,
+                Quantity3: ThisRecord.Quantity,
+                Backorder: newOrderRecord // This creates the relationship!
+            })
         )
-        ```
-    * **Note**: This is an advanced technique. You are essentially parameterizing your data source connections. Every `Filter`, `LookUp`, `Patch`, and `SubmitForm` function that interacts with Dataverse must be updated to reference the environment selected in the dropdown.
+    );
+    Clear(newOrderLines);
+    Navigate(MainMenuScreen);
+    ```
+
+#### **4.2 Filtering Orders by Partner in Power Pages**
+* **Goal:** Automatically filter orders to show only those belonging to the logged-in partner.
+* **Method:** Use server-side **Table Permissions**, not a Power Fx formula.
+* **Configuration Steps:**
+    1.  Open the **Portal Management** app.
+    2.  Go to **Security > Table Permissions** and create a new record.
+    3.  **Settings:**
+        * **Name:** `Partner Orders - Account Access`
+        * **Table:** `Backorder`
+        * **Access Type:** `Account Access`
+        * **Relationship:** Select the schema name of the lookup from `Backorder` to `CompanyInfo`.
+        * **Privileges:** Check `Read`.
+    4.  Assign this permission to the **Authenticated Users** Web Role.
+    5.  **Result:** Any list on the portal showing `Backorder` data will now be automatically and securely filtered for the logged-in user.
 
 ---
 
-### **Phase 5: Testing and Go-Live**
+### **5.0 Phase 4: Automation with Power Automate**
 
-**Goal**: Verify that the data separation is absolute and all workflows function correctly.
+#### **5.1 Automating Shipment Creation**
+* **Goal:** Automatically create a `FedExIntegration` record when an order status changes to "Shipped".
+* **Method:** An automated Power Automate cloud flow.
+* **Flow Design:**
+    1.  **Trigger:** Microsoft Dataverse - "When a row is added, modified or deleted"
+        * **Change type:** `Modified`
+        * **Table name:** `Backorder`
+        * **Filter rows:** `statuscode eq <Value for 'Shipped'>` (Use the integer value for the "Shipped" status choice to optimize).
+    2.  **Action 1:** Microsoft Dataverse - "Get a row by ID"
+        * **Table name:** `CompanyInfo`
+        * **Row ID:** Use the `Company (Value)` from the trigger output.
+    3.  **Action 2:** Microsoft Dataverse - "Add a new row"
+        * **Table name:** `FedExIntegration`
+        * **Mapping:** Populate the fields using data from the trigger and the "Get a row by ID" action. For example:
+            * `Backorder (Value)`: `OrderID` from the trigger.
+            * `Address`: `Address` from the "Get a row by ID" step.
+            * *(Continue mapping all address and other relevant fields)*
 
-**Technical Instructions:**
-
-1.  **Onboard Two Test Partners**
-    * Follow the complete checklist in Phase 3 to set up separate environments for "Partner A" and "Partner B".
-    * Load Partner A's data into their environment and Partner B's data into theirs.
-
-2.  **Test Portal Isolation**
-    * Log into the Power Pages portal for Partner A. Confirm you can only see Partner A's products.
-    * Log out and log into the portal for Partner B. Confirm you can only see Partner B's products.
-
-3.  **Test Internal App Functionality**
-    * Open the internal Power App.
-    * Select "Partner A" from your environment-switching dropdown. Verify you can view and edit Partner A's inventory.
-    * Switch the dropdown to "Partner B". Verify the app now shows Partner B's inventory and that you can manage it separately.
